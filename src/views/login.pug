@@ -1,0 +1,15 @@
+extends layout
+
+block content 
+    h1 Login 
+
+    form(method="POST" action="/login")
+        div 
+            label(for="email") Email:
+            input(type="email" name="email" id="email" placeholder="example@buddy.co.uk" required)
+
+        div
+            label(for="password") Password:
+            input(type="password" name="password" id="password" required)
+
+        button(type="submit") Login

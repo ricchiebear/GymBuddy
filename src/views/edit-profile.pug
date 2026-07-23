@@ -1,0 +1,31 @@
+extends layout 
+
+block content 
+    h1 Edit profile 
+
+    form(method="POST" action="/profile/edit" enctype="multipart/form-data")
+        div 
+            label(for="first_name") First Name:
+            input(type="text" name="first_name" id="first_name" value=user.first_name required)
+
+        div
+            label(for="last_name") Last Name:
+            input(type="text" name="last_name" id="last_name" value=user.last_name required)
+
+        div
+            label(for="email") Email:
+            input(type="email" name="email" id="email" value=user.email required)
+
+        div
+            label(for="fitness_goals") Fitness Goals:
+            textarea(name="fitness_goals" id="fitness_goals" value=user.fitness_goals placeholder="e.g. Build muscles, Lose weight, Improve stamina")
+
+        div
+            label(for="profile_bio") Bio:
+            textarea(name="profile_bio" id="profile_bio")= user.profile_bio
+
+        div 
+            label(for="Profile Picture") Profile Picture 
+            input(type="file" name="profile_picture" accept="image/*")
+
+        button(type="submit") Save Changes

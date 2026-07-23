@@ -1,0 +1,81 @@
+extends layout
+
+block content
+  h1 Workout Group Chat
+
+  if workout
+    h2= workout.title
+
+  form(method="POST" action=`/workouts/${workout.workout_id}/chat`)
+    label Message
+    textarea(name="message" required)
+    button(type="submit") Send
+
+  h2 Messages
+
+  div#messages
+    if messages.length === 0
+      p No messages yet.
+    else
+      each msg in messages
+        div
+          strong #{msg.sender_name}
+          p= msg.message
+          small= msg.created_at
+
+  a(href=`/workouts/${workout.workout_id}`) Back to Workout
+
+  script(src="/socket.io/socket.io.js")
+
+  script.
+    const socket = io();
+
+    const workoutId = "#{workout.workout_id}";
+
+    socket.emit("joinWorkoutChat", workoutId);
+
+    const form = document.querySelector("form");
+    const textarea = document.querySelector("textarea");
+    const messagesDiv = document.querySelector("#messages");
+
+    form.addEventListener("submit", function(e) {
+
+      e.preventDefault();
+
+      const message = textarea.value;
+
+      socket.emit("sendWorkoutMessage", {
+        workoutId: workoutId,
+        senderName: "User",
+        message: message
+      });
+
+      const div = document.createElement("div");
+
+      div.innerHTML = `
+        <div>
+          <strong>You</strong>
+          <p>${message}</p>
+        </div>
+      `;
+
+      messagesDiv.appendChild(div);
+
+      textarea.value = "";
+
+    });
+
+    socket.on("receiveWorkoutMessage", function(data) {
+
+      const div = document.createElement("div");
+
+      div.innerHTML = `
+        <div>
+          <strong>${data.senderName}</strong>
+          <p>${data.message}</p>
+        </div>
+      `;
+
+      messagesDiv.appendChild(div);
+
+    });

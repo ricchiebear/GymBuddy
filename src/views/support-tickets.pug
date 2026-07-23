@@ -1,0 +1,15 @@
+extends layout 
+
+block content 
+    h1 Support Tickets 
+
+    if tickets.length === 0
+        p No support tickets yet.
+    else 
+        each ticket in tickets 
+            div 
+                h3 #{ticket.issue_type} - #{ticket.status}
+                p Name: #{ticket.name}
+                p Email: #{ticket.email}
+                p Message: #{ticket.message}
+                small Submitted: #{ticket.created_at}

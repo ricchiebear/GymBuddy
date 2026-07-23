@@ -1,0 +1,12 @@
+extends layout 
+
+block content 
+    h1 Notifications
+
+    if notifications.length === 0
+        p You have no notifications at the moment. Check back later!
+    else
+        each notification in notifications
+            div
+                p notification.message
+                small=  notification.created_at

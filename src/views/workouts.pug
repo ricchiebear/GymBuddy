@@ -1,0 +1,36 @@
+extends layout 
+
+block content 
+    h1  Available Workouts
+    form(method="GET" action="/workouts")
+        input(type="text" name="type" placeholder="Workout type" value=filters.type)
+        input(type="text" name="location" placeholder="Location" value=filters.location)
+
+        select(name="status")
+            option(value="") All Status 
+            option(value="Open" selected=filters.status === "Open") Open 
+            option(value="Cancelled" selected=filters.status === "cancelled") Cancelled 
+            option(value="Completed" selected=filters.status === "Completed") Completed 
+
+        button(type="submit") Search 
+        a(href="/workouts") Clear Filters
+
+    if workouts.length === 0
+        p No workouts available at the moment. Please check back later.
+    else
+        each workout in workouts
+            if workout.workout_image
+                img(src=workout.workout_image alt="Workout Image" width="200")
+                
+            div
+                h2= workout.title
+                p Type: #{workout.workout_type}
+                p Location: #{workout.location}
+                p Starts:  #{workout.start_time}
+                p Ends: #{workout.end_time}
+                p Participants: #{workout.participants_count || 0}
+                p Date: #{workout.date ? workout.date.toDateString() : "N/A"}
+                p Created on: #{workout.created_at ? workout.created_at.toDateString() : "N/A"}  
+                p Updated on: #{workout.updated_at ? workout.updated_at.toDateString() : "N/A"}
+                p Status: #{workout.status}
+                a(href=`/workouts/${workout.workout_id}`) View Details

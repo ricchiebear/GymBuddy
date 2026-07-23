@@ -1,0 +1,18 @@
+extends layout 
+
+block content 
+    h1 Report Issue 
+
+    form(method="POST" action="/report")
+        input(type="hidden" name="workout_id" value=workout_id)
+        input(type="hidden" name="reported_user_id" value=reported_user_id)
+
+        label Report Type 
+        select(name"report_type" required)
+            option(value="Workout") Report Workout 
+            option(value="User") Report User 
+
+        label Reason 
+        textarea(name="reason" placeholder="Explain the issue..." Required)
+
+        button(type="submit") Submit Report

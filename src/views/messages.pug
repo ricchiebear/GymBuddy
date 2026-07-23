@@ -1,0 +1,34 @@
+extends layout
+
+block content
+  h1 Messages
+
+  h2 Send Direct Message
+
+  form(method="POST" action="/messages/send")
+    label Send To
+    select(name="receiver_id" required)
+      each user in users
+        option(value=user.user_id) #{user.first_name} #{user.last_name}
+
+    label Message
+    textarea(name="message" required)
+
+    button(type="submit") Send Message
+
+  h2 Inbox
+
+  if messages.length === 0
+    p No messages yet.
+  else
+    each msg in messages
+      div
+        if !msg.is_read
+          strong Unread
+        p From: #{msg.sender_name}
+        p= msg.message
+        small= msg.created_at
+
+        if !msg.is_read
+          form(method="POST" action=`/messages/${msg.message_id}/read`)
+            button(type="submit") Mark as Read

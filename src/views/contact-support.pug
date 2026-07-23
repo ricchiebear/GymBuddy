@@ -1,0 +1,22 @@
+extends layout 
+
+block content 
+    h1 Contact Support
+
+    form(method="POST", action="/support")
+        label Name 
+        input(type="text", name="name", required)
+
+        label Email 
+        input(type="email", name="email", required)
+
+        label Issue Type 
+        select(name="issue_type", required)
+            option(value="Issue") Issue
+            option(value="Complaint") Complaint
+            option(value="Bug Report") Bug Report
+
+            label Message
+            textarea(name="message", required)          
+
+        button(type="submit") Submit

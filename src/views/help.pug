@@ -1,0 +1,23 @@
+extends layout 
+
+block content 
+    h1 GymBuddy Help 
+
+    p Ask for help using keywords like: join, cretae, streak, message, profile.
+
+    form(method="GET" action="/help")
+        input(type="text" name="q" placeholder="Type your question..." value=quesry)
+        button(type="submit") Search
+
+        if answer 
+            h2 Answer:
+            p= answer
+        else
+            h2 Common Questions 
+            if questions.length === 0
+                p No help questions available.
+        else 
+        each item in questions 
+            div 
+            h3= item.question 
+            p= item.answer

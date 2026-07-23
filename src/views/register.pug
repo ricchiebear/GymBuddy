@@ -1,0 +1,40 @@
+extends layout
+
+block content
+  h1 Create Your GymBuddy Account
+
+  form(method="POST" action="/register")
+    div
+      label(for="first_name") First Name:
+      input(type="text" name="first_name" id="first_name" required)
+
+    div
+      label(for="last_name") Last Name:
+      input(type="text" name="last_name" id="last_name" required)
+
+    div
+      label(for="email") Email:
+      input(type="email" name="email" id="email" placeholder="example@buddy.co.uk" required)
+
+    div
+      label(for="password") Password:
+      input(type="password" name="password" id="password" required)
+
+    div
+      label(for="confirm_password") Confirm Password:
+      input(type="password" name="confirm_password" id="confirm_password" required)
+
+    div
+      label(for="fitness_goal") Fitness Goal:
+      select(name="fitness_goal" id="fitness_goal" required)
+        option(value="" disabled selected) Select your fitness goal
+        option(value="lose_weight") Lose Weight
+        option(value="build_muscle") Build Muscle
+        option(value="improve_endurance") Improve Endurance
+        option(value="general_fitness") General Fitness
+
+    div
+      label(for="profile_bio") Profile Bio:
+      textarea(name="profile_bio" id="profile_bio" rows="4" placeholder="Tell us about yourself...")
+
+    button(type="submit") Register

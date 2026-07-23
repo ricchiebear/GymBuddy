@@ -1,0 +1,58 @@
+extends layout
+
+block content
+  h1 Create Workout
+
+  form(method='POST' action='/workouts/create' enctype='multipart/form-data')
+    p
+      label(for='title') Title:
+      input(type='text' name='title' required)
+
+    p
+      | Workout Type:
+      select(name='workout_type' required)
+        option(value='') Select workout type
+        option(value='Strength') Strength
+        option(value='Cardio') Cardio
+        option(value='Running') Running
+        option(value='Cycling') Cycling
+        option(value='Dance') Dance
+        option(value='Football') Football
+        option(value='Swimming') Swimming
+
+    p
+      label(for='location') Location:
+      select(name="location" id="location" required)
+        option(value="" disabled selected) Select location
+        option(value="London") London
+        option(value="Manchester") Manchester 
+        option(value="Birmingham") Birmingham
+        option(value="Leeds") Leeds
+        option(value="Glasgow") Glasgow
+        option(value="Liverpool") Liverpool
+        option(value="Bristol") Bristol
+        option(value="Sheffield") Sheffield
+        option(value="Edinburgh") Edinburgh
+        option(value="Cardiff") Cardiff
+        option(value="Coventry") Coventry 
+        option(value="Nottingham") Nottingham
+        option(value="Leicester") Leicester
+        option(value="Southampton") Southampton
+        option(value="Newcastle") Newcastle
+        option(value="Brighton") Brighton
+        option(value="Plymouth") Plymouth
+
+
+    p
+      label(for="start_time") Start Time:
+      input(type='datetime-local' name='start_time' required)
+
+    p
+      label(for="end_time") End Time:
+      input(type='datetime-local' name='end_time' required)
+
+    p
+      label(for="workout_image") Workout Image:
+      input(type='file' name='workout_image')
+
+    button(type='submit') Create Workout

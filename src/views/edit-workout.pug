@@ -1,0 +1,70 @@
+extends layout
+
+block content
+
+    .page-container
+
+        h1 ✏️ Edit Workout
+        p Update your workout details below.
+
+        form(action=`/workouts/${workout.workout_id}/edit` method="POST" enctype="multipart/form-data")
+
+            .form-group
+                label(for="title") Workout Title
+                input(
+                    type="text"
+                    id="title"
+                    name="title"
+                    value=workout.title
+                    required
+                )
+
+            .form-group
+                label(for="workout_type") Workout Type
+                input(
+                    type="text"
+                    id="workout_type"
+                    name="workout_type"
+                    value=workout.workout_type
+                    required
+                )
+
+            .form-group
+                label(for="location") Location
+                input(
+                    type="text"
+                    id="location"
+                    name="location"
+                    value=workout.location
+                    required
+                )
+
+            .form-group
+                label(for="start_time") Start Time
+                input(
+                    type="datetime-local"
+                    id="start_time"
+                    name="start_time"
+                    value=workout.start_time
+                )
+
+            .form-group
+                label(for="end_time") End Time
+                input(
+                    type="datetime-local"
+                    id="end_time"
+                    name="end_time"
+                    value=workout.end_time
+                )
+
+            .form-group
+                label(for="workout_image") Workout Image
+                input(
+                    type="file"
+                    id="workout_image"
+                    name="workout_image"
+                )
+
+            .button-group
+                button.btn.btn-primary(type="submit") 💾 Save Changes
+                a.btn.btn-secondary(href="/my-workouts") Cancel

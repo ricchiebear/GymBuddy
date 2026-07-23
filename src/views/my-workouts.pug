@@ -1,0 +1,65 @@
+extends layout
+
+block content
+    main.my-workouts-page
+        .page-header
+            div
+                h1 🏋️ My Workouts
+                p Manage the workouts you have created.
+
+            a.primary-button(href="/workouts/create") ➕ Create Workout
+
+        if workouts.length === 0
+            .empty-state
+                h2 No workouts created yet
+                p Create your first workout and start connecting with gym partners.
+                a.primary-button(href="/workouts/create") Create Workout
+
+        else
+            .workout-grid
+                each workout in workouts
+                    article.workout-card
+                        if workout.workout_image
+                            img.workout-card-image(
+                                src=workout.workout_image
+                                alt=workout.title
+                            )
+                        else
+                            .workout-image-placeholder 🏋️
+
+                        .workout-card-content
+                            .workout-card-heading
+                                h2= workout.title
+                                span.workout-status= workout.status
+
+                            p
+                                strong Type:
+                                |  #{workout.workout_type}
+
+                            p
+                                strong Location:
+                                |  #{workout.location}
+
+                            p
+                                strong Starts:
+                                |  #{workout.start_time ? workout.start_time.toLocaleString() : "Not set"}
+
+                            p
+                                strong Ends:
+                                |  #{workout.end_time ? workout.end_time.toLocaleString() : "Not set"}
+
+                            .workout-actions
+                                a.secondary-button(
+                                    href=`/workouts/${workout.workout_id}`
+                                ) View Details
+
+                                a.edit-button(
+                                    href=`/workouts/${workout.workout_id}/edit`
+                                ) Edit
+
+                                form(
+                                    method="POST"
+                                    action=`/workouts/${workout.workout_id}/delete`
+                                    onsubmit="return confirm('Are you sure you want to delete this workout?')"
+                                )
+                                    button.delete-button(type="submit") Delete

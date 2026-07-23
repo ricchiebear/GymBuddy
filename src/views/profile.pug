@@ -1,0 +1,70 @@
+extends layout
+
+block content
+  main.dashboard
+
+    section.profile-card
+      h1 👤 My Profile
+
+      .profile-content
+        if user.profile_picture
+          img.profile-avatar(
+            src=user.profile_picture
+            alt="Profile picture"
+          )
+        else
+          .profile-avatar.profile-placeholder 👤
+
+        .profile-text
+          h2 #{user.first_name} #{user.last_name}
+          p 📧 #{user.email}
+          p 🎯 #{user.fitness_goal.replaceAll("_", " ")}
+          p 📝 #{user.profile_bio || "No bio added yet"}
+
+    section.dashboard-section
+      h2 Quick Actions
+
+      .action-grid
+        a.action-card(href="/profile/edit")
+          span.action-icon ✏️
+          span Edit Profile
+
+        a.action-card(href="/workouts/create")
+          span.action-icon ➕
+          span Create Workout
+
+        a.action-card(href="/my-workouts")
+          span.action-icon 🏋️
+          span My Workouts
+
+        a.action-card(href="/workout-requests")
+          span.action-icon 🤝
+          span Workout Requests
+
+        a.action-card(href="/messages")
+          span.action-icon 💬
+          span Messages
+
+    section.dashboard-section
+      h2 My Activity
+
+      .stats-grid
+        .stat-card
+          span.stat-icon 🏋️
+          strong= workoutsCreated
+          p Workouts Created
+
+        .stat-card
+          span.stat-icon 👥
+          strong= workoutPartners
+          p Workout Partners
+
+        .stat-card
+          span.stat-icon 🔥
+          strong #{currentStreak} Days
+          p Current Streak
+
+        .stat-card
+          span.stat-icon ⭐
+          strong= sessionsJoined
+          p Sessions Joined

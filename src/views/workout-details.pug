@@ -1,0 +1,84 @@
+extends layout
+
+block content
+    main.workout-details-page
+        h1= workout.title
+
+        if workout.workout_image
+            img(
+                src=workout.workout_image
+                alt="Workout Image"
+                width="300"
+            )
+
+        if workout.location
+            iframe(
+                width="400"
+                height="300"
+                style="border:0"
+                loading="lazy"
+                allowfullscreen
+                src=`https://www.google.com/maps?q=${encodeURIComponent(workout.location)}&output=embed`
+            )
+
+        p
+            strong Type:
+            |  #{workout.workout_type}
+
+        p
+            strong Location:
+            |  #{workout.location}
+
+        p
+            strong Starts:
+            |  #{workout.start_time}
+
+        p
+            strong Ends:
+            |  #{workout.end_time}
+
+        p
+            strong Created by:
+            |  #{workout.creator_first_name} #{workout.creator_last_name}
+
+        p
+            strong Participants:
+            |  #{workout.participants_count || 0}
+
+        p
+            strong Date:
+            |  #{workout.workout_date ? workout.workout_date.toDateString() : "Not set"}
+
+        p
+            strong Created on:
+            |  #{workout.created_at ? workout.created_at.toDateString() : "Not available"}
+
+        if workout.updated_at
+            p
+                strong Updated on:
+                |  #{workout.updated_at.toDateString()}
+
+        p
+            strong Status:
+            |  #{workout.status}
+
+        .workout-detail-actions
+            a(
+                href=`/workouts/${workout.workout_id}/calendar`
+            ) 📅 Add to Calendar
+
+            a(
+                href=`/report?workout_id=${workout.workout_id}`
+            ) 🚩 Report Workout
+
+            form(
+                method="POST"
+                action=`/workouts/${workout.workout_id}/join`
+            )
+                button(type="submit") 🤝 Request to Join
+
+            a(href="/workouts") ← Back to Workouts
+
+            a(
+                href=`/workouts/${workout.workout_id}/chat`
+            ) 💬 Open Group Chat

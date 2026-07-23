@@ -1,0 +1,10 @@
+extends layout 
+
+block content 
+h1 My Workout Streak 
+
+if streak 
+    p Current Streak: #{streak.current_count} days
+    p Last Workout Date: #{streak.last_workout_date}
+else
+    p You don't have an active workout streak yet. Start working out to build your streak!
