@@ -1,18 +1,36 @@
-extends layout 
+extends layout
 
-block content 
-    h1 Workout Join Requests 
+block content
+    h1 Workout Join Requests
 
-    if requests.length === 0
-        p You have no pending workout join requests at the moment. Check back later!
-    else
+    if requests && requests.length > 0
         each request in requests
-            div
-                h3= request.title 
-                p Requested by: #{request.requester.first_name} #{request.requester.last_name}
-                p Status: #{request.status}
+            .request-card
+                h3= request.title
 
-                form(method="POST" action=`/workout-requests/${request.request_id}/accept`)
-                    button(type="submit") Accept
-                form(method="POST" action=`/workout-requests/${request.request_id}/reject`)
-                    button(type="submit") Reject
+                p
+                    strong Requested by:
+                    |  #{request.first_name} #{request.last_name}
+
+                p
+                    strong Status:
+                    |  #{request.status}
+
+                p
+                    strong Requested on:
+                    |  #{new Date(request.created_at).toLocaleString()}
+
+                .request-actions
+                    form(
+                        method="POST"
+                        action=`/workout-requests/${request.request_id}/accept`
+                    )
+                        button(type="submit") Accept
+
+                    form(
+                        method="POST"
+                        action=`/workout-requests/${request.request_id}/reject`
+                    )
+                        button(type="submit") Reject
+    else
+        p You have no pending workout join requests at the moment. Check back later, Buddy!

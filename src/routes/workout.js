@@ -523,17 +523,26 @@ router.get("/workouts/:id", async (req, res) => {
 //=====================================================
 // REQUEST TO JOIN WORKOUT
 //===================================================== 
-
 router.post(
     "/workouts/:id/join",
     requireLogin,
     async (req, res) => {
         try {
-            const workoutId = req.params.id;
-            const userId = req.session.userId;
+            const workoutId = Number(req.params.id);
+            const userId = Number(req.session.userId);
+
+            if (!workoutId || !userId) {
+                return res.status(400).send(
+                    "Workout ID or logged-in user is missing."
+                );
+            }
 
             const [workoutRows] = await db.query(
-                `SELECT user_id, title, status
+                `SELECT
+                    workout_id,
+                    user_id,
+                    title,
+                    status
                  FROM workouts
                  WHERE workout_id = ?`,
                 [workoutId]
@@ -541,57 +550,64 @@ router.post(
 
             if (workoutRows.length === 0) {
                 return res.status(404).send(
-                    "Workout not found"
+                    "Workout not found."
                 );
             }
 
             const workout = workoutRows[0];
-            const hostId = workout.user_id;
+            const hostId = Number(workout.user_id);
 
+            // Prevent the workout owner from joining their own workout
             if (hostId === userId) {
                 return res.status(400).send(
                     "You cannot request to join your own workout."
                 );
             }
 
+            // Only open workouts can receive requests
             if (
-                workout.status.toLowerCase() !== "open"
+                String(workout.status).toLowerCase() !== "open"
             ) {
                 return res.status(400).send(
-                    "This workout is not currently open."
+                    "This workout is not open for join requests."
                 );
             }
 
-            const [existingParticipants] = await db.query(
+            // Check whether the user has already joined
+            const [participantRows] = await db.query(
                 `SELECT participant_id
                  FROM workout_participants
                  WHERE workout_id = ?
-                 AND user_id = ?
+                   AND user_id = ?
                  LIMIT 1`,
                 [workoutId, userId]
             );
 
-            if (existingParticipants.length > 0) {
+            if (participantRows.length > 0) {
                 return res.status(400).send(
                     "You have already joined this workout."
                 );
             }
 
-            const [existingRequests] = await db.query(
-                `SELECT request_id, status
+            // Check whether the user has already sent a request
+            const [requestRows] = await db.query(
+                `SELECT
+                    request_id,
+                    status
                  FROM join_requests
                  WHERE workout_id = ?
-                 AND user_id = ?
+                   AND user_id = ?
                  LIMIT 1`,
                 [workoutId, userId]
             );
 
-            if (existingRequests.length > 0) {
+            if (requestRows.length > 0) {
                 return res.status(400).send(
-                    `You already have a ${existingRequests[0].status} request for this workout.`
+                    `You already have a ${requestRows[0].status} request for this workout.`
                 );
             }
 
+            // Save the pending join request
             await db.query(
                 `INSERT INTO join_requests
                  (workout_id, user_id, status)
@@ -599,37 +615,49 @@ router.post(
                 [workoutId, userId, "pending"]
             );
 
+            // Use the logged-in user's name in the notification
+            const requesterName =
+                req.session.userName || "Someone";
+
+            // Notify the workout owner
             await db.query(
                 `INSERT INTO notifications
                  (user_id, message)
                  VALUES (?, ?)`,
                 [
                     hostId,
-                    `Someone requested to join your workout: ${workout.title}`
+                    `${requesterName} requested to join your workout "${workout.title}".`
                 ]
             );
 
-            res.redirect(`/workouts/${workoutId}`);
+            res.send("Join request sent successfully.");
         } catch (error) {
-            console.error("Join request error:", error);
+            console.error(
+                "JOIN REQUEST ERROR:",
+                error
+            );
 
             res.status(500).send(
-                `Join request failed: ${Error.message}`
+                error.sqlMessage ||
+                error.message ||
+                "Error sending join request."
             );
         }
     }
 );
 
+
 //=====================================================
 // VIEW RECEIVED JOIN REQUESTS
 //===================================================== 
-
 router.get(
     "/workout-requests",
     requireLogin,
     async (req, res) => {
         try {
-            const userId = req.session.userId;
+            const userId = Number(req.session.userId);
+
+            console.log("WORKOUT REQUEST PAGE USER:", userId);
 
             const [requests] = await db.query(
                 `SELECT
@@ -648,50 +676,69 @@ router.get(
                  INNER JOIN users u
                     ON jr.user_id = u.user_id
                  WHERE w.user_id = ?
-                 AND LOWER(jr.status) = 'pending'
+                   AND LOWER(jr.status) = 'pending'
                  ORDER BY jr.created_at DESC`,
                 [userId]
             );
+
+            console.log("PENDING REQUESTS FOUND:", requests);
 
             res.render("workout-requests", {
                 title: "Workout Requests",
                 requests
             });
         } catch (error) {
-            console.error("Workout requests error:", error);
+            console.error("WORKOUT REQUESTS ERROR:", error);
+
             res.status(500).send(
+                error.sqlMessage ||
+                error.message ||
                 "Error loading workout requests"
             );
         }
     }
 );
 
-//=====================================================
-// ACCEPT JOIN REQUEST
-//===================================================== */
+
+// --------------------------------------------------
+// ACCEPT WORKOUT JOIN REQUEST
+// --------------------------------------------------
 
 router.post(
     "/workout-requests/:id/accept",
     requireLogin,
     async (req, res) => {
-        const connection = await db.getConnection();
+        let connection;
 
         try {
-            const requestId = req.params.id;
-            const hostId = req.session.userId;
+            const requestId = Number(req.params.id);
+            const hostId = Number(req.session.userId);
 
+            if (!requestId || !hostId) {
+                return res.status(400).send(
+                    "Request ID or logged-in user is missing."
+                );
+            }
+
+            connection = await db.getConnection();
             await connection.beginTransaction();
 
+            // Get the request, workout and owner information
             const [requestRows] = await connection.query(
                 `SELECT
                     jr.request_id,
-                    jr.user_id,
+                    jr.user_id AS requester_id,
                     jr.workout_id,
                     jr.status,
-                    w.user_id AS host_id
+                    w.user_id AS host_id,
+                    w.title AS workout_title,
+                    u.first_name AS host_first_name,
+                    u.last_name AS host_last_name
                  FROM join_requests jr
                  INNER JOIN workouts w
                     ON jr.workout_id = w.workout_id
+                 INNER JOIN users u
+                    ON w.user_id = u.user_id
                  WHERE jr.request_id = ?
                  FOR UPDATE`,
                 [requestId]
@@ -701,30 +748,34 @@ router.post(
                 await connection.rollback();
 
                 return res.status(404).send(
-                    "Join request not found"
+                    "Join request not found."
                 );
             }
 
             const request = requestRows[0];
 
-            if (request.host_id !== hostId) {
+            // Only the workout creator can accept the request
+            if (Number(request.host_id) !== hostId) {
                 await connection.rollback();
 
                 return res.status(403).send(
-                    "You cannot manage this request."
+                    "You cannot manage this join request."
                 );
             }
 
+            // Prevent an accepted/rejected request from being processed again
             if (
-                request.status.toLowerCase() !== "pending"
+                String(request.status).toLowerCase() !==
+                "pending"
             ) {
                 await connection.rollback();
 
                 return res.status(400).send(
-                    "This request has already been processed."
+                    "This join request has already been processed."
                 );
             }
 
+            // Change request status to accepted
             await connection.query(
                 `UPDATE join_requests
                  SET status = 'accepted'
@@ -732,19 +783,21 @@ router.post(
                 [requestId]
             );
 
+            // Check whether the requester is already a participant
             const [participantRows] =
                 await connection.query(
                     `SELECT participant_id
                      FROM workout_participants
                      WHERE workout_id = ?
-                     AND user_id = ?
+                       AND user_id = ?
                      LIMIT 1`,
                     [
                         request.workout_id,
-                        request.user_id
+                        request.requester_id
                     ]
                 );
 
+            // Add the requester to the official participant list
             if (participantRows.length === 0) {
                 await connection.query(
                     `INSERT INTO workout_participants
@@ -752,18 +805,22 @@ router.post(
                      VALUES (?, ?)`,
                     [
                         request.workout_id,
-                        request.user_id
+                        request.requester_id
                     ]
                 );
             }
 
+            const hostName =
+                `${request.host_first_name} ${request.host_last_name}`;
+
+            // Notify the requester
             await connection.query(
                 `INSERT INTO notifications
                  (user_id, message)
                  VALUES (?, ?)`,
                 [
-                    request.user_id,
-                    "Your workout join request has been accepted."
+                    request.requester_id,
+                    `${hostName} accepted your request to join "${request.workout_title}".`
                 ]
             );
 
@@ -771,64 +828,137 @@ router.post(
 
             res.redirect("/workout-requests");
         } catch (error) {
-            await connection.rollback();
+            if (connection) {
+                await connection.rollback();
+            }
 
-            console.error("Accept request error:", error);
+            console.error(
+                "ACCEPT REQUEST ERROR:",
+                error
+            );
+
             res.status(500).send(
-                "Error accepting workout request"
+                error.sqlMessage ||
+                error.message ||
+                "Error accepting workout request."
             );
         } finally {
-            connection.release();
+            if (connection) {
+                connection.release();
+            }
         }
     }
 );
 
 //=====================================================
+// VIEW JOINED WORKOUTS
+//=====================================================
+router.get(
+    "/joined-workouts",
+    requireLogin,
+    async (req, res) => {
+        try {
+            const userId = req.session.userId;
+
+            const [workouts] = await db.query(
+                `SELECT
+                w.workout_id,
+                w.title,
+                w.location,
+                w.start_time,
+                w.end_time,
+                w.status,
+                w.workout_image,
+                u.first_name AS creator_first_name,
+                u.last_name AS creator_last_name
+            FROM workout_participants wp
+            INNER JOIN workouts w
+                ON wp.workout_id = w.workout_id
+            INNER JOIN users u
+                ON w.user_id = u.user_id
+            WHERE wp.user_id = ?
+            ORDER BY w.start_time ASC`,
+                [userId]
+            );
+
+            res.render("joined-workouts", {
+                title: "My Joined Workouts",
+                workouts
+            });
+        } catch (error) {
+            console.error("Joined workouts error:", error);
+
+            res.status(500).send(
+                error.sqlMessage ||
+                error.message ||
+                "Error loading joined workouts"
+            );
+        }
+    }
+);
+
+     
+//=====================================================
 // REJECT JOIN REQUEST
 //===================================================== 
-
 router.post(
     "/workout-requests/:id/reject",
     requireLogin,
     async (req, res) => {
         try {
-            const requestId = req.params.id;
-            const hostId = req.session.userId;
+            const requestId = Number(req.params.id);
+            const hostId = Number(req.session.userId);
 
+            if (!requestId || !hostId) {
+                return res.status(400).send(
+                    "Request ID or logged-in user is missing."
+                );
+            }
+
+            // Get the request, workout and owner information
             const [requestRows] = await db.query(
                 `SELECT
-                    jr.user_id,
+                    jr.request_id,
+                    jr.user_id AS requester_id,
                     jr.status,
-                    w.user_id AS host_id
+                    w.user_id AS host_id,
+                    w.title AS workout_title,
+                    u.first_name AS host_first_name,
+                    u.last_name AS host_last_name
                  FROM join_requests jr
                  INNER JOIN workouts w
                     ON jr.workout_id = w.workout_id
+                 INNER JOIN users u
+                    ON w.user_id = u.user_id
                  WHERE jr.request_id = ?`,
                 [requestId]
             );
 
             if (requestRows.length === 0) {
                 return res.status(404).send(
-                    "Join request not found"
+                    "Join request not found."
                 );
             }
 
             const request = requestRows[0];
 
-            if (request.host_id !== hostId) {
+            // Only the workout creator can reject the request
+            if (Number(request.host_id) !== hostId) {
                 return res.status(403).send(
-                    "You cannot manage this request."
+                    "You cannot manage this join request."
                 );
             }
 
+            // Prevent rejecting the same request twice
             if (
-                request.status.toLowerCase() !== "pending"
+                String(request.status).toLowerCase() !== "pending"
             ) {
                 return res.status(400).send(
-                    "This request has already been processed."
+                    "This join request has already been processed."
                 );
             }
 
+            // Update request status
             await db.query(
                 `UPDATE join_requests
                  SET status = 'rejected'
@@ -836,21 +966,31 @@ router.post(
                 [requestId]
             );
 
+            const hostName =
+                `${request.host_first_name} ${request.host_last_name}`;
+
+            // Notify the requester
             await db.query(
                 `INSERT INTO notifications
                  (user_id, message)
                  VALUES (?, ?)`,
                 [
-                    request.user_id,
-                    "Your workout join request was rejected."
+                    request.requester_id,
+                    `${hostName} rejected your request to join "${request.workout_title}".`
                 ]
             );
 
             res.redirect("/workout-requests");
         } catch (error) {
-            console.error("Reject request error:", error);
+            console.error(
+                "REJECT REQUEST ERROR:",
+                error
+            );
+
             res.status(500).send(
-                "Error rejecting workout request"
+                error.sqlMessage ||
+                error.message ||
+                "Error rejecting workout request."
             );
         }
     }
@@ -859,7 +999,6 @@ router.post(
 // =====================================================
 // CANCEL CREATED WORKOUT
 //===================================================== 
-
 router.post(
     "/workouts/:id/cancel",
     requireLogin,
@@ -914,7 +1053,6 @@ router.post(
 // =====================================================
 // LEAVE JOINED WORKOUT
 // ===================================================== 
-
 router.post(
     "/joined-workouts/:id/leave",
     requireLogin,
@@ -959,7 +1097,6 @@ router.post(
 //=====================================================
 // COMPLETE WORKOUT + UPDATE STREAK
 //===================================================== 
-
 router.post(
     "/workouts/:id/complete",
     requireLogin,

@@ -2,72 +2,180 @@ const express = require("express");
 const router = express.Router();
 const db = require("../config/database");
 
-// Notifications page route
-router.get("/notifications", async (req, res) => {
-    try {
-        // Temporary user ID for demonstration
-        const userId = 1;
-
-        const [notifications] = await db.query(
-            "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC",
-            [userId]
-        );
-        res.render("Notifications", { 
-            title: "Notifications", 
-            notifications 
-        });
-     }   catch (error) {
-        console.error("Notifications page error:", error);
-        res.status(500).send("Error fetching notifications");
+// --------------------------------------------------
+// LOGIN PROTECTION
+// --------------------------------------------------
+function requireLogin(req, res, next) {
+    if (!req.session || !req.session.userId) {
+        return res.redirect("/login");
     }
-});
 
-// Route to clear all notifications for the user
-router.post("/notifications/clear", async (req, res) => {
-    try {
-        const userId = 1; // Placeholder for logged-in user ID
+    next();
+}
 
-        await db.query(
-            "DELETE FROM notifications WHERE user_id = ?",
-            [userId]
-        );
-        res.redirect("/notifications");
-    } catch (error) {
-        console.error("Clear notifications error:", error);
-        res.status(500).send("Error clearing notifications");
+// --------------------------------------------------
+// VIEW NOTIFICATIONS
+// --------------------------------------------------
+router.get(
+    "/notifications",
+    requireLogin,
+    async (req, res) => {
+        try {
+            const userId = Number(req.session.userId);
+
+            const [notifications] = await db.query(
+                `SELECT
+                    notification_id,
+                    message,
+                    is_read,
+                    created_at
+                 FROM notifications
+                 WHERE user_id = ?
+                 ORDER BY created_at DESC`,
+                [userId]
+            );
+
+            const [[unreadResult]] = await db.query(
+                `SELECT COUNT(*) AS total
+                 FROM notifications
+                 WHERE user_id = ?
+                   AND is_read = FALSE`,
+                [userId]
+            );
+
+            res.render("notifications", {
+                title: "Notifications",
+                notifications,
+                unreadCount: unreadResult.total
+            });
+        } catch (error) {
+            console.error(
+                "NOTIFICATIONS PAGE ERROR:",
+                error
+            );
+
+            res.status(500).send(
+                error.sqlMessage ||
+                error.message ||
+                "Error loading notifications."
+            );
+        }
     }
-});
+);
 
-// Route to mark a specific notification as read
-router.post("/notifications/:id/mark-read", async (req, res) => {
-    try {
-        const notificationId = req.params.id;
+// --------------------------------------------------
+// MARK ONE NOTIFICATION AS READ
+// --------------------------------------------------
+router.post(
+    "/notifications/:id/read",
+    requireLogin,
+    async (req, res) => {
+        try {
+            const notificationId = Number(req.params.id);
+            const userId = Number(req.session.userId);
 
-        await db.query(
-            "UPDATE notifications SET is_read = TRUE WHERE notification_id = ?",
-            [notificationId]
-        );
-        res.redirect("/notifications");
-    } catch (error) {
-        console.error("Mark notification read error:", error);
-        res.status(500).send("Error marking notification as read");
-     }
-});
+            const [result] = await db.query(
+                `UPDATE notifications
+                 SET is_read = TRUE
+                 WHERE notification_id = ?
+                   AND user_id = ?`,
+                [notificationId, userId]
+            );
 
-// Route to delete a specific notification
-router.post("/notifications/:id/delete", async (req, res) => {
-    try {
-        const notificationId = req.params.id;
+            if (result.affectedRows === 0) {
+                return res.status(404).send(
+                    "Notification not found."
+                );
+            }
 
-        await db.query(
-            "DELETE FROM notifications WHERE notification_id = ?",
-            [notificationId]
-        );
-        res.redirect("/notifications");
-    } catch (error) {
-        console.error("Delete notification error:", error);
-        res.status(500).send("Error deleting notification");
-     }
-});
+            res.redirect("/notifications");
+        } catch (error) {
+            console.error(
+                "MARK NOTIFICATION READ ERROR:",
+                error
+            );
+
+            res.status(500).send(
+                error.sqlMessage ||
+                error.message ||
+                "Error updating notification."
+            );
+        }
+    }
+);
+
+// --------------------------------------------------
+// MARK ALL NOTIFICATIONS AS READ
+// --------------------------------------------------
+router.post(
+    "/notifications/read-all",
+    requireLogin,
+    async (req, res) => {
+        try {
+            const userId = Number(req.session.userId);
+
+            await db.query(
+                `UPDATE notifications
+                 SET is_read = TRUE
+                 WHERE user_id = ?
+                   AND is_read = FALSE`,
+                [userId]
+            );
+
+            res.redirect("/notifications");
+        } catch (error) {
+            console.error(
+                "MARK ALL NOTIFICATIONS READ ERROR:",
+                error
+            );
+
+            res.status(500).send(
+                error.sqlMessage ||
+                error.message ||
+                "Error updating notifications."
+            );
+        }
+    }
+);
+
+// --------------------------------------------------
+// DELETE ONE NOTIFICATION
+// --------------------------------------------------
+router.post(
+    "/notifications/:id/delete",
+    requireLogin,
+    async (req, res) => {
+        try {
+            const notificationId = Number(req.params.id);
+            const userId = Number(req.session.userId);
+
+            const [result] = await db.query(
+                `DELETE FROM notifications
+                 WHERE notification_id = ?
+                   AND user_id = ?`,
+                [notificationId, userId]
+            );
+
+            if (result.affectedRows === 0) {
+                return res.status(404).send(
+                    "Notification not found."
+                );
+            }
+
+            res.redirect("/notifications");
+        } catch (error) {
+            console.error(
+                "DELETE NOTIFICATION ERROR:",
+                error
+            );
+
+            res.status(500).send(
+                error.sqlMessage ||
+                error.message ||
+                "Error deleting notification."
+            );
+        }
+    }
+);
 
 module.exports = router;

@@ -30,6 +30,13 @@ app.use(
     })
 );
 
+app.get("/session-check", (req, res) => {
+    res.json({
+        userId: req.session.userId || null,
+        userName: req.session.userName || null,
+    });
+});
+
 // --------------------------------------------------
 // MIDDLEWARE
 // --------------------------------------------------

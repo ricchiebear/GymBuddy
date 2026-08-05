@@ -1,0 +1,50 @@
+extends layout
+
+block content
+    h1 My Joined Workouts
+
+    if workouts && workouts.length > 0
+        each workout in workouts
+            .workout-card
+                if workout.workout_image
+                    img(
+                        src=workout.workout_image
+                        alt=workout.title
+                        width="250"
+                    )
+
+                h2= workout.title
+
+                p
+                    strong Created by:
+                    |  #{workout.creator_first_name} #{workout.creator_last_name}
+
+                p
+                    strong Type:
+                    |  #{workout.workout_type}
+
+                p
+                    strong Location:
+                    |  #{workout.location}
+
+                p
+                    strong Starts:
+                    |  #{new Date(workout.start_time).toLocaleString()}
+
+                p
+                    strong Ends:
+                    |  #{new Date(workout.end_time).toLocaleString()}
+
+                p
+                    strong Status:
+                    |  #{workout.status}
+
+                a(href=`/workouts/${workout.workout_id}`) View Details
+
+                form(
+                    method="POST"
+                    action=`/joined-workouts/${workout.workout_id}/leave`
+                )
+                    button(type="submit") Leave Workout
+    else
+        p You have not joined any workouts yet.

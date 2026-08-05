@@ -1,12 +1,48 @@
-extends layout 
+extends layout
 
-block content 
-    h1 Notifications
-
-    if notifications.length === 0
-        p You have no notifications at the moment. Check back later!
-    else
-        each notification in notifications
+block content
+    main.notifications-page
+        .notifications-header
             div
-                p notification.message
-                small=  notification.created_at
+                h1 🔔 Notifications
+                p You have #{unreadCount} unread notification#{unreadCount === 1 ? "" : "s"}.
+
+            if unreadCount > 0
+                form(method="POST" action="/notifications/read-all")
+                    button(type="submit") Mark All as Read
+
+        if notifications && notifications.length > 0
+            .notifications-list
+                each notification in notifications
+                    article.notification-card(
+                        class=notification.is_read ? "notification-read" : "notification-unread"
+                    )
+                        .notification-content
+                            if notification.is_read
+                                span.notification-status ✓ Read
+                            else
+                                span.notification-status ● New
+
+                            p.notification-message= notification.message
+
+                            small.notification-date
+                                | #{new Date(notification.created_at).toLocaleString()}
+
+                        .notification-actions
+                            if !notification.is_read
+                                form(
+                                    method="POST"
+                                    action=`/notifications/${notification.notification_id}/read`
+                                )
+                                    button(type="submit") Mark as Read
+
+                            form(
+                                method="POST"
+                                action=`/notifications/${notification.notification_id}/delete`
+                                onsubmit="return confirm('Delete this notification?')"
+                            )
+                                button(type="submit") Delete
+        else
+            .empty-state
+                h2 No notifications yet
+                p Your workout requests and updates will appear here.
