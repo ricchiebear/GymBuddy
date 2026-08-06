@@ -1,125 +1,199 @@
 const express = require("express");
-const router = express.Router();
 const db = require("../config/database");
 
-// Help page route
-router.get("/help", async (req, res) => {
-  try {
-    const query = req.query.q || "";
-    let answer = null;
+const router = express.Router();
 
-    if (query) {
-      const [rows] = await db.query(
-        `SELECT ha.answer
-         FROM help_questions hq
-         JOIN help_answers ha ON hq.question_id = ha.question_id
-         WHERE ? LIKE CONCAT('%', hq.keyword, '%')
-         LIMIT 1`,
-        [query.toLowerCase()]
-      );
-
-      if (rows.length > 0) {
-        answer = rows[0].answer;
-      } else {
-        answer = "Sorry, we could not find an answer to your question.";
-      }
+function requireLogin(req, res, next) {
+    if (!req.session || !req.session.userId) {
+        return res.redirect("/login");
     }
 
-    const [questions] = await db.query(
-      `SELECT hq.question, ha.answer
-       FROM help_questions hq
-       JOIN help_answers ha ON hq.question_id = ha.question_id`
-    );
+    next();
+}
 
-    res.render("help", {
-      title: "Help",
-      query,
-      answer,
-      questions
-    });
+// Show support form
+router.get(
+    "/support",
+    requireLogin,
+    async (req, res) => {
+        try {
+            const userId = Number(req.session.userId);
 
-  } catch (error) {
-    console.error("Help page error:", error);
-    res.status(500).send("Error fetching help questions");
-  }
-});
+            const [users] = await db.query(
+                `SELECT email
+                 FROM users
+                 WHERE user_id = ?
+                 LIMIT 1`,
+                [userId]
+            );
 
-// Show contact support form
-router.get("/support", (req, res) => {
-  res.render("contact-support", {
-    title: "Contact Support"
-  });
-});
+            if (users.length === 0) {
+                return res.status(404).send(
+                    "User not found."
+                );
+            }
+
+            res.render("support", {
+                title: "Help and Support",
+                email: users[0].email
+            });
+        } catch (error) {
+            console.error(
+                "SUPPORT PAGE ERROR:",
+                error
+            );
+
+            res.status(500).send(
+                error.sqlMessage ||
+                error.message ||
+                "Error loading support page."
+            );
+        }
+    }
+);
 
 // Submit support ticket
-router.post("/support", async (req, res) => {
-  try {
-    const { name, email, issue_type, message } = req.body;
+router.post(
+    "/support",
+    requireLogin,
+    async (req, res) => {
+        try {
+            const userId = Number(req.session.userId);
 
-    await db.query(
-      `INSERT INTO support_tickets 
-       (name, email, issue_type, message, status)
-       VALUES (?, ?, ?, ?, ?)`,
-      [name, email, issue_type, message, "Pending"]
-    );
+            const email = req.body.email?.trim();
+            const issueType =
+                req.body.issue_type?.trim();
+            const message =
+                req.body.message?.trim();
 
-    res.redirect("/support/tickets");
-  } catch (error) {
-    console.error("Support ticket error:", error);
-    res.status(500).send("Error submitting support ticket");
-  }
-});
+            if (!email || !issueType || !message) {
+                return res.status(400).send(
+                    "Please complete all support fields."
+                );
+            }
 
-// View support tickets
-router.get("/support/tickets", async (req, res) => {
-  try {
-    const [tickets] = await db.query(
-      "SELECT * FROM support_tickets ORDER BY created_at DESC"
-    );
+            await db.query(
+                `INSERT INTO support_tickets
+                 (
+                    user_id,
+                    email,
+                    issue_type,
+                    message,
+                    status
+                 )
+                 VALUES (?, ?, ?, ?, 'open')`,
+                [
+                    userId,
+                    email,
+                    issueType,
+                    message
+                ]
+            );
 
-    res.render("support-tickets", {
-      title: "Support Tickets",
-      tickets
-    });
-  } catch (error) {
-    console.error("Tickets error:", error);
-    res.status(500).send("Error loading tickets");
-  }
-});
+            res.redirect("/my-support-tickets");
+        } catch (error) {
+            console.error(
+                "SUBMIT SUPPORT TICKET ERROR:",
+                error
+            );
 
-// Show report form
-router.get("/report", (req, res) => {
-  res.render("report", {
-    title: "Report",
-    workout_id: req.query.workout_id || null,
-    reported_user_id: req.query.user_id || null
-  });
-});
+            res.status(500).send(
+                error.sqlMessage ||
+                error.message ||
+                "Error submitting support ticket."
+            );
+        }
+    }
+);
 
-// Submit report
-router.post("/report", async (req, res) => {
-  try {
-    const reporterId = 1;
-    const { workout_id, reported_user_id, report_type, reason } =req.body;
+// View logged-in user’s tickets
+router.get(
+    "/my-support-tickets",
+    requireLogin,
+    async (req, res) => {
+        try {
+            const userId = Number(req.session.userId);
 
-    await db.query(
-      `INSERT INTO reports
-      (reporter_id, reported_user_id, workout_id, report_type, reason, status)
-      VALUES (?, ?, ?, ?, ?, ?)`,
-    [
-      reported_user_id,
-      reported_user_id || null,
-      workout_id || null,
-      report_type,
-      reason,
-      "Pending"
-    ]
-  );
-  res.redirect("/help");
-} catch (error) {
-  console.error("Report error:", error);
-  res.status(500).send("Error submitting report");
-}
-});
+            const [tickets] = await db.query(
+                `SELECT
+                    ticket_id,
+                    email,
+                    issue_type,
+                    message,
+                    status,
+                    created_at
+                 FROM support_tickets
+                 WHERE user_id = ?
+                 ORDER BY created_at DESC`,
+                [userId]
+            );
+
+            res.render("my-support-tickets", {
+                title: "My Support Tickets",
+                tickets
+            });
+        } catch (error) {
+            console.error(
+                "MY SUPPORT TICKETS ERROR:",
+                error
+            );
+
+            res.status(500).send(
+                error.sqlMessage ||
+                error.message ||
+                "Error loading support tickets."
+            );
+        }
+    }
+);
+
+// View one ticket
+router.get(
+    "/support-tickets/:id",
+    requireLogin,
+    async (req, res) => {
+        try {
+            const ticketId = Number(req.params.id);
+            const userId = Number(req.session.userId);
+
+            const [tickets] = await db.query(
+                `SELECT
+                    ticket_id,
+                    email,
+                    issue_type,
+                    message,
+                    status,
+                    created_at
+                 FROM support_tickets
+                 WHERE ticket_id = ?
+                   AND user_id = ?
+                 LIMIT 1`,
+                [ticketId, userId]
+            );
+
+            if (tickets.length === 0) {
+                return res.status(404).send(
+                    "Support ticket not found."
+                );
+            }
+
+            res.render("support-ticket-details", {
+                title: `Support Ticket #${ticketId}`,
+                ticket: tickets[0]
+            });
+        } catch (error) {
+            console.error(
+                "SUPPORT TICKET DETAILS ERROR:",
+                error
+            );
+
+            res.status(500).send(
+                error.sqlMessage ||
+                error.message ||
+                "Error loading support ticket."
+            );
+        }
+    }
+);
 
 module.exports = router;

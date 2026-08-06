@@ -31,7 +31,7 @@ CREATE TABLE workouts (
         ON DELETE CASCADE
 );
 
-CREATE TABLE join_request (
+CREATE TABLE join_requests (
     request_id INT AUTO_INCREMENT PRIMARY KEY,
     workout_id INT NOT NULL,
     user_id INT NOT NULL,
@@ -84,13 +84,31 @@ CREATE TABLE messages (
         ON DELETE CASCADE
 );
 
+CREATE TABLE message_requests (
+    request_id INT AUTO_INCREMENT PRIMARY KEY,
+    sender_id INT NOT NULL,
+    receiver_id INT NOT NULL,
+    first_message TEXT NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (sender_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (receiver_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE
+);
+
 CREATE TABLE notifications (
     notification_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     message VARCHAR(255) NOT NULL,
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
     FOREIGN KEY (user_id)
         REFERENCES users(user_id)
         ON DELETE CASCADE

@@ -1,10 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../config/database");
+const formatDate = require("../utils/formatDate");
 
 // --------------------------------------------------
 // LOGIN PROTECTION
 // --------------------------------------------------
+
 function requireLogin(req, res, next) {
     if (!req.session || !req.session.userId) {
         return res.redirect("/login");
@@ -16,6 +18,7 @@ function requireLogin(req, res, next) {
 // --------------------------------------------------
 // VIEW NOTIFICATIONS
 // --------------------------------------------------
+
 router.get(
     "/notifications",
     requireLogin,
@@ -35,6 +38,15 @@ router.get(
                 [userId]
             );
 
+            // Add a readable time to every notification
+            const formattedNotifications =
+                notifications.map((notification) => ({
+                    ...notification,
+                    displayTime: formatDate(
+                        notification.created_at
+                    )
+                }));
+
             const [[unreadResult]] = await db.query(
                 `SELECT COUNT(*) AS total
                  FROM notifications
@@ -45,7 +57,7 @@ router.get(
 
             res.render("notifications", {
                 title: "Notifications",
-                notifications,
+                notifications: formattedNotifications,
                 unreadCount: unreadResult.total
             });
         } catch (error) {
@@ -66,20 +78,27 @@ router.get(
 // --------------------------------------------------
 // MARK ONE NOTIFICATION AS READ
 // --------------------------------------------------
+
 router.post(
     "/notifications/:id/read",
     requireLogin,
     async (req, res) => {
         try {
-            const notificationId = Number(req.params.id);
-            const userId = Number(req.session.userId);
+            const notificationId =
+                Number(req.params.id);
+
+            const userId =
+                Number(req.session.userId);
 
             const [result] = await db.query(
                 `UPDATE notifications
                  SET is_read = TRUE
                  WHERE notification_id = ?
                    AND user_id = ?`,
-                [notificationId, userId]
+                [
+                    notificationId,
+                    userId
+                ]
             );
 
             if (result.affectedRows === 0) {
@@ -107,12 +126,14 @@ router.post(
 // --------------------------------------------------
 // MARK ALL NOTIFICATIONS AS READ
 // --------------------------------------------------
+
 router.post(
     "/notifications/read-all",
     requireLogin,
     async (req, res) => {
         try {
-            const userId = Number(req.session.userId);
+            const userId =
+                Number(req.session.userId);
 
             await db.query(
                 `UPDATE notifications
@@ -141,19 +162,26 @@ router.post(
 // --------------------------------------------------
 // DELETE ONE NOTIFICATION
 // --------------------------------------------------
+
 router.post(
     "/notifications/:id/delete",
     requireLogin,
     async (req, res) => {
         try {
-            const notificationId = Number(req.params.id);
-            const userId = Number(req.session.userId);
+            const notificationId =
+                Number(req.params.id);
+
+            const userId =
+                Number(req.session.userId);
 
             const [result] = await db.query(
                 `DELETE FROM notifications
                  WHERE notification_id = ?
                    AND user_id = ?`,
-                [notificationId, userId]
+                [
+                    notificationId,
+                    userId
+                ]
             );
 
             if (result.affectedRows === 0) {

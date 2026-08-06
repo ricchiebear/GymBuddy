@@ -1,0 +1,50 @@
+extends layout
+
+block content
+    main.support-tickets-page
+
+        h1 My Support Tickets
+
+        a(href="/support") Submit New Support Ticket
+
+        br
+        br
+
+        if tickets && tickets.length > 0
+
+            each ticket in tickets
+
+                article.support-ticket-card
+
+                    h2 Ticket ##{ticket.ticket_id}
+
+                    p
+                        strong Issue:
+                        |  #{ticket.issue_type}
+
+                    p
+                        strong Status:
+                        |  #{ticket.status}
+
+                    p
+                        strong Submitted:
+                        |  #{new Date(ticket.created_at).toLocaleString("en-GB")}
+
+                    p
+                        strong Description:
+
+                    p= ticket.message
+
+                    a(
+                        href=`/support-tickets/${ticket.ticket_id}`
+                    ) View Ticket
+
+                    hr
+
+        else
+
+            p You have not submitted any support tickets yet.
+
+        br
+
+        a(href="/support") Back to Help & Support

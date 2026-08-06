@@ -1,0 +1,107 @@
+extends layout
+
+block content
+    main.private-chat-page
+
+        h1 Private Chat
+
+        .chat-partner
+            if partner.profile_picture
+                img(
+                    src=partner.profile_picture
+                    alt=`${partner.first_name} ${partner.last_name}`
+                    width="55"
+                    height="55"
+                )
+            else
+                span 👤
+
+            h2 #{partner.first_name} #{partner.last_name}
+
+        if canMessage
+
+            .private-messages
+
+                if messages && messages.length > 0
+
+                    each msg in messages
+
+                        article.private-message(
+                            class=Number(msg.sender_id) === Number(currentUserId)
+                                ? "sent-message"
+                                : "received-message"
+                        )
+
+                            .message-sender
+
+                                if msg.sender_profile_picture
+                                    img(
+                                        src=msg.sender_profile_picture
+                                        alt=`${msg.sender_first_name} ${msg.sender_last_name}`
+                                        width="40"
+                                        height="40"
+                                    )
+                                else
+                                    span 👤
+
+                                strong #{msg.sender_first_name} #{msg.sender_last_name}
+
+                            p.message-text= msg.message
+
+                            small.message-time= msg.displayTime
+
+                else
+
+                    p No messages yet. Start the conversation.
+
+            form(
+                method="POST"
+                action=`/messages/${partner.user_id}`
+            )
+
+                label(for="message") Message
+
+                textarea(
+                    id="message"
+                    name="message"
+                    placeholder="Type your message..."
+                    required
+                )
+
+                button(type="submit") Send
+
+        else if requestStatus && requestStatus.toLowerCase() === "pending"
+
+            p Your message request is still pending.
+
+        else if requestStatus && requestStatus.toLowerCase() === "rejected"
+
+            p Your previous message request was rejected.
+
+        else
+
+            p You are not matched with this user yet.
+
+            p Your first message will be sent as a message request.
+
+            form(
+                method="POST"
+                action=`/messages/${partner.user_id}`
+            )
+
+                label(for="message") First Message
+
+                textarea(
+                    id="message"
+                    name="message"
+                    placeholder="Write a respectful introduction..."
+                    required
+                )
+
+                button(type="submit")
+                    | Send Message Request
+
+        br
+
+        a(href="/messages")
+            | ← Back to Messages

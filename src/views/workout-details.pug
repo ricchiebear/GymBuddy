@@ -66,11 +66,6 @@ block content
             a(
                 href=`/workouts/${workout.workout_id}/calendar`
             ) 📅 Add to Calendar
-
-            a(
-                href=`/report?workout_id=${workout.workout_id}`
-            ) 🚩 Report Workout
-
             form(
                 method="POST"
                 action=`/workouts/${workout.workout_id}/join`
@@ -82,3 +77,7 @@ block content
             a(
                 href=`/workouts/${workout.workout_id}/chat`
             ) 💬 Open Group Chat
+
+            a(
+                href=`/workouts/${workout.workout_id}/report`
+            ) 🚩 Report Workout

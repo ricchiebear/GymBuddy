@@ -5,10 +5,15 @@ block content
         .notifications-header
             div
                 h1 🔔 Notifications
-                p You have #{unreadCount} unread notification#{unreadCount === 1 ? "" : "s"}.
+
+                p
+                    | You have #{unreadCount} unread notification#{unreadCount === 1 ? "" : "s"}.
 
             if unreadCount > 0
-                form(method="POST" action="/notifications/read-all")
+                form(
+                    method="POST"
+                    action="/notifications/read-all"
+                )
                     button(type="submit") Mark All as Read
 
         if notifications && notifications.length > 0
@@ -25,8 +30,7 @@ block content
 
                             p.notification-message= notification.message
 
-                            small.notification-date
-                                | #{new Date(notification.created_at).toLocaleString()}
+                            small.notification-date= notification.displayTime
 
                         .notification-actions
                             if !notification.is_read

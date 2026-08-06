@@ -1,0 +1,60 @@
+extends layout
+
+block content
+    main.report-workout-page
+        h1 Report Workout
+
+        if workout
+            h2= workout.title
+
+            p
+                strong Type:
+                |  #{workout.workout_type}
+
+            p
+                strong Location:
+                |  #{workout.location}
+
+        form(
+            method="POST"
+            action=`/workouts/${workout.workout_id}/report`
+        )
+            label(for="reason") Reason for report
+
+            select(
+                id="reason"
+                name="reason"
+                required
+            )
+                option(value="") Select a reason
+                option(value="Spam or misleading content") Spam or misleading content
+                option(value="Unsafe activity") Unsafe activity
+                option(value="Harassment or abusive behaviour") Harassment or abusive behaviour
+                option(value="Inappropriate content") Inappropriate content
+                option(value="Fake workout or false information") Fake workout or false information
+                option(value="Scam or suspicious activity") Scam or suspicious activity
+                option(value="Dangerous location") Dangerous location
+                option(value="Duplicate workout") Duplicate workout
+                option(value="Other") Other
+
+            br
+            br
+
+            label(for="other_reason") Extra details
+
+            textarea(
+                id="other_reason"
+                name="other_reason"
+                placeholder="Add more details if needed..."
+            )
+
+            br
+            br
+
+            button(type="submit") Submit Report
+
+        br
+
+        a(
+            href=`/workouts/${workout.workout_id}`
+        ) Back to Workout

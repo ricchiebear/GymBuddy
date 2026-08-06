@@ -1,0 +1,31 @@
+extends layout
+
+block content
+    main.support-ticket-details-page
+        h1 Support Ticket ##{ticket.ticket_id}
+
+        p
+            strong Issue Type:
+            |  #{ticket.issue_type}
+
+        p
+            strong Status:
+            |  #{ticket.status}
+
+        p
+            strong Contact Email:
+            |  #{ticket.email}
+
+        p
+            strong Submitted:
+            |  #{new Date(ticket.created_at).toLocaleString("en-GB")}
+
+        h2 Problem Description
+
+        p= ticket.message
+
+        a(href="/my-support-tickets") Back to My Support Tickets
+
+        br
+
+        a(href="/support") Submit Another Ticket

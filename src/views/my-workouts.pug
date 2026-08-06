@@ -9,7 +9,7 @@ block content
 
             a.primary-button(href="/workouts/create") ➕ Create Workout
 
-        if workouts.length === 0
+        if !workouts || workouts.length === 0
             .empty-state
                 h2 No workouts created yet
                 p Create your first workout and start connecting with gym partners.
@@ -18,6 +18,8 @@ block content
         else
             .workout-grid
                 each workout in workouts
+                    - const workoutStatus = String(workout.status || "").toLowerCase()
+
                     article.workout-card
                         if workout.workout_image
                             img.workout-card-image(
@@ -30,7 +32,10 @@ block content
                         .workout-card-content
                             .workout-card-heading
                                 h2= workout.title
-                                span.workout-status= workout.status
+
+                                span.workout-status(
+                                    class=`status-${workoutStatus}`
+                                )= workout.status
 
                             p
                                 strong Type:
@@ -42,24 +47,57 @@ block content
 
                             p
                                 strong Starts:
-                                |  #{workout.start_time ? workout.start_time.toLocaleString() : "Not set"}
+                                |  #{workout.start_time ? new Date(workout.start_time).toLocaleString("en-GB") : "Not set"}
 
                             p
                                 strong Ends:
-                                |  #{workout.end_time ? workout.end_time.toLocaleString() : "Not set"}
+                                |  #{workout.end_time ? new Date(workout.end_time).toLocaleString("en-GB") : "Not set"}
+
+                            p
+                                strong Participants:
+                                |  #{workout.participants_count || 0}
 
                             .workout-actions
                                 a.secondary-button(
                                     href=`/workouts/${workout.workout_id}`
                                 ) View Details
 
-                                a.edit-button(
-                                    href=`/workouts/${workout.workout_id}/edit`
-                                ) Edit
+                                if workoutStatus === "open"
+                                    a.edit-button(
+                                        href=`/workouts/${workout.workout_id}/edit`
+                                    ) Edit
+
+                                    form(
+                                        method="POST"
+                                        action=`/workouts/${workout.workout_id}/complete`
+                                        onsubmit="return confirm('Mark this workout as completed? This will update workout history and streaks for the owner and all accepted participants.')"
+                                    )
+                                        button.complete-button(
+                                            type="submit"
+                                        ) Mark as Completed
+
+                                    form(
+                                        method="POST"
+                                        action=`/workouts/${workout.workout_id}/cancel`
+                                        onsubmit="return confirm('Are you sure you want to cancel this workout? All accepted participants will be notified.')"
+                                    )
+                                        button.cancel-button(
+                                            type="submit"
+                                        ) Cancel Workout
+
+                                else if workoutStatus === "cancelled"
+                                    p.workout-action-message
+                                        | This workout has been cancelled.
+
+                                else if workoutStatus === "completed"
+                                    p.workout-action-message
+                                        | This workout has been completed.
 
                                 form(
                                     method="POST"
                                     action=`/workouts/${workout.workout_id}/delete`
-                                    onsubmit="return confirm('Are you sure you want to delete this workout?')"
+                                    onsubmit="return confirm('Are you sure you want to permanently delete this workout? This action cannot be undone.')"
                                 )
-                                    button.delete-button(type="submit") Delete
+                                    button.delete-button(
+                                        type="submit"
+                                    ) Delete

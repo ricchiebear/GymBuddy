@@ -11,6 +11,8 @@ const workoutRoutes = require("./routes/workout");
 const notificationRoutes = require("./routes/notification");
 const streakRoutes = require("./routes/streaks");
 const messagesRoutes = require("./routes/messages");
+const privateMessagesRoutes = require("./routes/privateMessages");
+const reportRoutes = require("./routes/report");
 const helpRoutes = require("./routes/help");
 
 const app = express();
@@ -92,6 +94,8 @@ app.use("/", workoutRoutes);
 app.use("/", notificationRoutes);
 app.use("/", streakRoutes);
 app.use("/", messagesRoutes);
+app.use("/", privateMessagesRoutes);
+app.use("/", reportRoutes);
 app.use("/", helpRoutes);
 
 // --------------------------------------------------

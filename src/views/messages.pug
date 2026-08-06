@@ -1,34 +1,56 @@
 extends layout
 
 block content
-  h1 Messages
+    main.messages-page
+        h1 Messages
 
-  h2 Send Direct Message
+        if pendingRequestCount > 0
+            p
+                a(href="/message-requests")
+                    | You have #{pendingRequestCount} pending message request#{pendingRequestCount === 1 ? "" : "s"}
 
-  form(method="POST" action="/messages/send")
-    label Send To
-    select(name="receiver_id" required)
-      each user in users
-        option(value=user.user_id) #{user.first_name} #{user.last_name}
+        h2 Conversations
 
-    label Message
-    textarea(name="message" required)
+        if conversations && conversations.length > 0
+            each conversation in conversations
+                .conversation-card
+                    if conversation.partner_profile_picture
+                        img(
+                            src=conversation.partner_profile_picture
+                            alt=`${conversation.partner_first_name} ${conversation.partner_last_name}`
+                            width="50"
+                            height="50"
+                        )
+                    else
+                        span 👤
 
-    button(type="submit") Send Message
+                    .conversation-details
+                        h3
+                            a(href=`/messages/${conversation.partner_id}`)
+                                | #{conversation.partner_first_name} #{conversation.partner_last_name}
 
-  h2 Inbox
+                        p= conversation.message
 
-  if messages.length === 0
-    p No messages yet.
-  else
-    each msg in messages
-      div
-        if !msg.is_read
-          strong Unread
-        p From: #{msg.sender_name}
-        p= msg.message
-        small= msg.created_at
+                        small= new Date(conversation.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
+        else
+            p You do not have any conversations yet.
 
-        if !msg.is_read
-          form(method="POST" action=`/messages/${msg.message_id}/read`)
-            button(type="submit") Mark as Read
+        h2 Start a Conversation
+
+        if users && users.length > 0
+            each user in users
+                .user-card
+                    if user.profile_picture
+                        img(
+                            src=user.profile_picture
+                            alt=`${user.first_name} ${user.last_name}`
+                            width="45"
+                            height="45"
+                        )
+                    else
+                        span 👤
+
+                    a(href=`/messages/${user.user_id}`)
+                        | #{user.first_name} #{user.last_name}
+        else
+            p No other users are available.

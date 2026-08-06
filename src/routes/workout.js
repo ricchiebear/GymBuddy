@@ -2,6 +2,8 @@ const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const db = require("../config/database");
+const formatDate = require("../utils/formatDate");
+const createNotification = require("../utils/createNotification");
 
 const router = express.Router();
 
@@ -446,6 +448,484 @@ router.post(
 );
 
 //=====================================================
+// CANCEL WORKOUT AND NOTIFY ACCEPTED PARTICIPANTS
+//=====================================================
+
+router.post(
+    "/workouts/:id/cancel",
+    requireLogin,
+    async (req, res) => {
+        let connection;
+
+        try {
+            const workoutId = Number(req.params.id);
+            const ownerId = Number(req.session.userId);
+
+            if (!workoutId || !ownerId) {
+                return res.status(400).send(
+                    "Workout ID or logged-in user is missing."
+                );
+            }
+
+            connection = await db.getConnection();
+            await connection.beginTransaction();
+
+            // Find and temporarily lock the workout.
+            const [workoutRows] = await connection.query(
+                `SELECT
+                    w.workout_id,
+                    w.user_id AS owner_id,
+                    w.title,
+                    w.status,
+                    u.first_name AS owner_first_name,
+                    u.last_name AS owner_last_name
+                 FROM workouts w
+                 INNER JOIN users u
+                    ON w.user_id = u.user_id
+                 WHERE w.workout_id = ?
+                 FOR UPDATE`,
+                [workoutId]
+            );
+
+            if (workoutRows.length === 0) {
+                await connection.rollback();
+
+                return res.status(404).send(
+                    "Workout not found."
+                );
+            }
+
+            const workout = workoutRows[0];
+
+            // Only the workout creator can cancel it.
+            if (Number(workout.owner_id) !== ownerId) {
+                await connection.rollback();
+
+                return res.status(403).send(
+                    "You cannot cancel another user's workout."
+                );
+            }
+
+            // Prevent cancelling it repeatedly.
+            if (
+                String(workout.status).toLowerCase() ===
+                "cancelled"
+            ) {
+                await connection.rollback();
+
+                return res.status(400).send(
+                    "This workout has already been cancelled."
+                );
+            }
+
+            // A completed workout should not be cancelled.
+            if (
+                String(workout.status).toLowerCase() ===
+                "completed"
+            ) {
+                await connection.rollback();
+
+                return res.status(400).send(
+                    "A completed workout cannot be cancelled."
+                );
+            }
+
+            // Find every accepted participant.
+            const [participants] = await connection.query(
+                `SELECT
+                    wp.user_id
+                 FROM workout_participants wp
+                 WHERE wp.workout_id = ?`,
+                [workoutId]
+            );
+
+            // Change the workout status instead of deleting it.
+            await connection.query(
+                `UPDATE workouts
+                 SET status = 'cancelled'
+                 WHERE workout_id = ?
+                   AND user_id = ?`,
+                [workoutId, ownerId]
+            );
+
+            // Close any requests that are still pending.
+            await connection.query(
+                `UPDATE join_requests
+                 SET status = 'rejected'
+                 WHERE workout_id = ?
+                   AND LOWER(status) = 'pending'`,
+                [workoutId]
+            );
+
+            const ownerName =
+                `${workout.owner_first_name} ${workout.owner_last_name}`;
+
+            // Give each accepted participant their own notification.
+            for (const participant of participants) {
+                const participantId = Number(
+                    participant.user_id
+                );
+
+                // Extra protection: never notify the owner.
+                if (participantId !== ownerId) {
+                    await createNotification(
+                        participantId,
+                        `${ownerName} cancelled the workout "${workout.title}".`,
+                        connection
+                    );
+                }
+            }
+
+            await connection.commit();
+
+            res.redirect("/my-workouts");
+        } catch (error) {
+            if (connection) {
+                await connection.rollback();
+            }
+
+            console.error(
+                "CANCEL WORKOUT ERROR:",
+                error
+            );
+
+            res.status(500).send(
+                error.sqlMessage ||
+                error.message ||
+                "Error cancelling workout."
+            );
+        } finally {
+            if (connection) {
+                connection.release();
+            }
+        }
+    }
+);
+
+
+//=====================================================
+// COMPLETE WORKOUT
+//=====================================================
+router.post(
+    "/workouts/:id/complete",
+    requireLogin,
+    async (req, res) => {
+        let connection;
+
+        try {
+            const workoutId = Number(req.params.id);
+            const ownerId = Number(req.session.userId);
+
+            if (!workoutId || !ownerId) {
+                return res.status(400).send(
+                    "Workout ID or logged-in user is missing."
+                );
+            }
+
+            connection = await db.getConnection();
+            await connection.beginTransaction();
+
+            // Get and temporarily lock the workout
+            const [workoutRows] = await connection.query(
+                `SELECT
+                    w.workout_id,
+                    w.user_id AS owner_id,
+                    w.title,
+                    w.status,
+                    w.workout_date,
+                    w.start_time,
+                    w.end_time,
+                    u.first_name AS owner_first_name,
+                    u.last_name AS owner_last_name
+                 FROM workouts w
+                 INNER JOIN users u
+                    ON w.user_id = u.user_id
+                 WHERE w.workout_id = ?
+                 FOR UPDATE`,
+                [workoutId]
+            );
+
+            if (workoutRows.length === 0) {
+                await connection.rollback();
+
+                return res.status(404).send(
+                    "Workout not found."
+                );
+            }
+
+            const workout = workoutRows[0];
+
+            // Only the workout creator can complete it
+            if (Number(workout.owner_id) !== ownerId) {
+                await connection.rollback();
+
+                return res.status(403).send(
+                    "You cannot complete another user's workout."
+                );
+            }
+
+            const currentStatus =
+                String(workout.status || "").toLowerCase();
+
+            // Prevent completing the same workout twice
+            if (currentStatus === "completed") {
+                await connection.rollback();
+
+                return res.status(400).send(
+                    "This workout has already been completed."
+                );
+            }
+
+            // Cancelled workouts cannot be completed
+            if (currentStatus === "cancelled") {
+                await connection.rollback();
+
+                return res.status(400).send(
+                    "A cancelled workout cannot be completed."
+                );
+            }
+
+            // The workout must have a valid end time
+            if (!workout.end_time) {
+                await connection.rollback();
+
+                return res.status(400).send(
+                    "This workout does not have a valid scheduled end time."
+                );
+            }
+
+            const currentTime = new Date();
+            const workoutEndTime =
+                new Date(workout.end_time);
+
+            if (Number.isNaN(workoutEndTime.getTime())) {
+                await connection.rollback();
+
+                return res.status(400).send(
+                    "The workout end time is invalid."
+                );
+            }
+
+            // Prevent the owner from completing the workout early
+            if (currentTime < workoutEndTime) {
+                await connection.rollback();
+
+                return res.status(400).send(
+                    "You can only mark this workout as completed after its scheduled end time."
+                );
+            }
+
+            // Find every accepted participant
+            const [participantRows] =
+                await connection.query(
+                    `SELECT user_id
+                     FROM workout_participants
+                     WHERE workout_id = ?`,
+                    [workoutId]
+                );
+
+            // Include both the owner and accepted participants
+            const userIds = [
+                ownerId,
+                ...participantRows.map(
+                    participant =>
+                        Number(participant.user_id)
+                )
+            ];
+
+            // Prevent duplicate user IDs
+            const uniqueUserIds = [
+                ...new Set(userIds)
+            ];
+
+            // Update the workout status
+            await connection.query(
+                `UPDATE workouts
+                 SET status = 'completed'
+                 WHERE workout_id = ?
+                   AND user_id = ?`,
+                [workoutId, ownerId]
+            );
+
+            const completionDate =
+                workout.workout_date ||
+                new Date()
+                    .toISOString()
+                    .slice(0, 10);
+
+            // Add workout history and update streaks
+            // for the owner and every accepted participant
+            for (const userId of uniqueUserIds) {
+                await connection.query(
+                    `INSERT IGNORE INTO workout_history
+                     (
+                        user_id,
+                        workout_id,
+                        workout_date
+                     )
+                     VALUES (?, ?, ?)`,
+                    [
+                        userId,
+                        workoutId,
+                        completionDate
+                    ]
+                );
+
+                const [streakRows] =
+                    await connection.query(
+                        `SELECT
+                            streak_id,
+                            current_streak,
+                            longest_streak,
+                            last_workout_date
+                         FROM streaks
+                         WHERE user_id = ?
+                         FOR UPDATE`,
+                        [userId]
+                    );
+
+                const completedWorkoutDate =
+                    new Date(`${completionDate}T00:00:00`);
+
+                if (streakRows.length === 0) {
+                    // First completed workout for this user
+                    await connection.query(
+                        `INSERT INTO streaks
+                         (
+                            user_id,
+                            current_streak,
+                            longest_streak,
+                            last_workout_date
+                         )
+                         VALUES (?, 1, 1, ?)`,
+                        [
+                            userId,
+                            completionDate
+                        ]
+                    );
+                } else {
+                    const streak = streakRows[0];
+
+                    let currentStreak =
+                        Number(
+                            streak.current_streak || 0
+                        );
+
+                    let longestStreak =
+                        Number(
+                            streak.longest_streak || 0
+                        );
+
+                    const lastWorkoutDate =
+                        streak.last_workout_date
+                            ? new Date(
+                                `${new Date(
+                                    streak.last_workout_date
+                                )
+                                    .toISOString()
+                                    .slice(0, 10)}T00:00:00`
+                            )
+                            : null;
+
+                    if (!lastWorkoutDate) {
+                        currentStreak = 1;
+                    } else {
+                        const millisecondsPerDay =
+                            1000 * 60 * 60 * 24;
+
+                        const differenceInDays =
+                            Math.round(
+                                (
+                                    completedWorkoutDate -
+                                    lastWorkoutDate
+                                ) /
+                                millisecondsPerDay
+                            );
+
+                        if (differenceInDays === 0) {
+                            // Multiple workouts completed on the same day
+                            currentStreak =
+                                currentStreak || 1;
+                        } else if (
+                            differenceInDays === 1
+                        ) {
+                            // Consecutive workout day
+                            currentStreak += 1;
+                        } else {
+                            // The user missed one or more days
+                            currentStreak = 1;
+                        }
+                    }
+
+                    if (
+                        currentStreak >
+                        longestStreak
+                    ) {
+                        longestStreak =
+                            currentStreak;
+                    }
+
+                    await connection.query(
+                        `UPDATE streaks
+                         SET current_streak = ?,
+                             longest_streak = ?,
+                             last_workout_date = ?
+                         WHERE user_id = ?`,
+                        [
+                            currentStreak,
+                            longestStreak,
+                            completionDate,
+                            userId
+                        ]
+                    );
+                }
+            }
+
+            const ownerName =
+                `${workout.owner_first_name} ${workout.owner_last_name}`;
+
+            // Notify accepted participants only
+            for (const participant of participantRows) {
+                const participantId =
+                    Number(participant.user_id);
+
+                if (participantId !== ownerId) {
+                    await createNotification(
+                        participantId,
+                        `${ownerName} marked the workout "${workout.title}" as completed.`,
+                        connection
+                    );
+                }
+            }
+
+            await connection.commit();
+
+            res.redirect("/my-workouts");
+        } catch (error) {
+            if (connection) {
+                await connection.rollback();
+            }
+
+            console.error(
+                "COMPLETE WORKOUT ERROR:",
+                error
+            );
+
+            res.status(500).send(
+                error.sqlMessage ||
+                error.message ||
+                "Error completing workout."
+            );
+        } finally {
+            if (connection) {
+                connection.release();
+            }
+        }
+    }
+);
+
+
+//=====================================================
 // DELETE WORKOUT
 //===================================================== 
 
@@ -520,9 +1000,10 @@ router.get("/workouts/:id", async (req, res) => {
     }
 });
 
-//=====================================================
+// --------------------------------------------------
 // REQUEST TO JOIN WORKOUT
-//===================================================== 
+// --------------------------------------------------
+
 router.post(
     "/workouts/:id/join",
     requireLogin,
@@ -557,23 +1038,21 @@ router.post(
             const workout = workoutRows[0];
             const hostId = Number(workout.user_id);
 
-            // Prevent the workout owner from joining their own workout
             if (hostId === userId) {
                 return res.status(400).send(
                     "You cannot request to join your own workout."
                 );
             }
 
-            // Only open workouts can receive requests
             if (
-                String(workout.status).toLowerCase() !== "open"
+                String(workout.status).toLowerCase() !==
+                "open"
             ) {
                 return res.status(400).send(
                     "This workout is not open for join requests."
                 );
             }
 
-            // Check whether the user has already joined
             const [participantRows] = await db.query(
                 `SELECT participant_id
                  FROM workout_participants
@@ -589,7 +1068,6 @@ router.post(
                 );
             }
 
-            // Check whether the user has already sent a request
             const [requestRows] = await db.query(
                 `SELECT
                     request_id,
@@ -607,30 +1085,32 @@ router.post(
                 );
             }
 
-            // Save the pending join request
             await db.query(
                 `INSERT INTO join_requests
-                 (workout_id, user_id, status)
+                 (
+                    workout_id,
+                    user_id,
+                    status
+                 )
                  VALUES (?, ?, ?)`,
-                [workoutId, userId, "pending"]
-            );
-
-            // Use the logged-in user's name in the notification
-            const requesterName =
-                req.session.userName || "Someone";
-
-            // Notify the workout owner
-            await db.query(
-                `INSERT INTO notifications
-                 (user_id, message)
-                 VALUES (?, ?)`,
                 [
-                    hostId,
-                    `${requesterName} requested to join your workout "${workout.title}".`
+                    workoutId,
+                    userId,
+                    "pending"
                 ]
             );
 
-            res.send("Join request sent successfully.");
+            const requesterName =
+                req.session.userName || "Someone";
+
+            await createNotification(
+                hostId,
+                `${requesterName} requested to join your workout "${workout.title}".`
+            );
+
+            res.send(
+                "Join request sent successfully."
+            );
         } catch (error) {
             console.error(
                 "JOIN REQUEST ERROR:",
@@ -703,7 +1183,6 @@ router.get(
 // --------------------------------------------------
 // ACCEPT WORKOUT JOIN REQUEST
 // --------------------------------------------------
-
 router.post(
     "/workout-requests/:id/accept",
     requireLogin,
@@ -721,28 +1200,38 @@ router.post(
             }
 
             connection = await db.getConnection();
+
             await connection.beginTransaction();
 
-            // Get the request, workout and owner information
-            const [requestRows] = await connection.query(
-                `SELECT
-                    jr.request_id,
-                    jr.user_id AS requester_id,
-                    jr.workout_id,
-                    jr.status,
-                    w.user_id AS host_id,
-                    w.title AS workout_title,
-                    u.first_name AS host_first_name,
-                    u.last_name AS host_last_name
-                 FROM join_requests jr
-                 INNER JOIN workouts w
-                    ON jr.workout_id = w.workout_id
-                 INNER JOIN users u
-                    ON w.user_id = u.user_id
-                 WHERE jr.request_id = ?
-                 FOR UPDATE`,
-                [requestId]
-            );
+            const [requestRows] =
+                await connection.query(
+                    `SELECT
+                        jr.request_id,
+                        jr.user_id AS requester_id,
+                        jr.workout_id,
+                        jr.status,
+
+                        w.user_id AS host_id,
+                        w.title AS workout_title,
+
+                        u.first_name AS host_first_name,
+                        u.last_name AS host_last_name
+
+                     FROM join_requests jr
+
+                     INNER JOIN workouts w
+                        ON jr.workout_id =
+                           w.workout_id
+
+                     INNER JOIN users u
+                        ON w.user_id =
+                           u.user_id
+
+                     WHERE jr.request_id = ?
+
+                     FOR UPDATE`,
+                    [requestId]
+                );
 
             if (requestRows.length === 0) {
                 await connection.rollback();
@@ -754,8 +1243,9 @@ router.post(
 
             const request = requestRows[0];
 
-            // Only the workout creator can accept the request
-            if (Number(request.host_id) !== hostId) {
+            if (
+                Number(request.host_id) !== hostId
+            ) {
                 await connection.rollback();
 
                 return res.status(403).send(
@@ -763,7 +1253,6 @@ router.post(
                 );
             }
 
-            // Prevent an accepted/rejected request from being processed again
             if (
                 String(request.status).toLowerCase() !==
                 "pending"
@@ -775,7 +1264,6 @@ router.post(
                 );
             }
 
-            // Change request status to accepted
             await connection.query(
                 `UPDATE join_requests
                  SET status = 'accepted'
@@ -783,7 +1271,6 @@ router.post(
                 [requestId]
             );
 
-            // Check whether the requester is already a participant
             const [participantRows] =
                 await connection.query(
                     `SELECT participant_id
@@ -797,11 +1284,13 @@ router.post(
                     ]
                 );
 
-            // Add the requester to the official participant list
             if (participantRows.length === 0) {
                 await connection.query(
                     `INSERT INTO workout_participants
-                     (workout_id, user_id)
+                     (
+                        workout_id,
+                        user_id
+                     )
                      VALUES (?, ?)`,
                     [
                         request.workout_id,
@@ -813,15 +1302,10 @@ router.post(
             const hostName =
                 `${request.host_first_name} ${request.host_last_name}`;
 
-            // Notify the requester
-            await connection.query(
-                `INSERT INTO notifications
-                 (user_id, message)
-                 VALUES (?, ?)`,
-                [
-                    request.requester_id,
-                    `${hostName} accepted your request to join "${request.workout_title}".`
-                ]
+            await createNotification(
+                request.requester_id,
+                `${hostName} accepted your request to join "${request.workout_title}".`,
+                connection
             );
 
             await connection.commit();
@@ -898,9 +1382,10 @@ router.get(
 );
 
      
-//=====================================================
-// REJECT JOIN REQUEST
-//===================================================== 
+// --------------------------------------------------
+// REJECT WORKOUT JOIN REQUEST
+// --------------------------------------------------
+
 router.post(
     "/workout-requests/:id/reject",
     requireLogin,
@@ -915,21 +1400,28 @@ router.post(
                 );
             }
 
-            // Get the request, workout and owner information
             const [requestRows] = await db.query(
                 `SELECT
                     jr.request_id,
                     jr.user_id AS requester_id,
                     jr.status,
+
                     w.user_id AS host_id,
                     w.title AS workout_title,
+
                     u.first_name AS host_first_name,
                     u.last_name AS host_last_name
+
                  FROM join_requests jr
+
                  INNER JOIN workouts w
-                    ON jr.workout_id = w.workout_id
+                    ON jr.workout_id =
+                       w.workout_id
+
                  INNER JOIN users u
-                    ON w.user_id = u.user_id
+                    ON w.user_id =
+                       u.user_id
+
                  WHERE jr.request_id = ?`,
                 [requestId]
             );
@@ -942,23 +1434,23 @@ router.post(
 
             const request = requestRows[0];
 
-            // Only the workout creator can reject the request
-            if (Number(request.host_id) !== hostId) {
+            if (
+                Number(request.host_id) !== hostId
+            ) {
                 return res.status(403).send(
                     "You cannot manage this join request."
                 );
             }
 
-            // Prevent rejecting the same request twice
             if (
-                String(request.status).toLowerCase() !== "pending"
+                String(request.status).toLowerCase() !==
+                "pending"
             ) {
                 return res.status(400).send(
                     "This join request has already been processed."
                 );
             }
 
-            // Update request status
             await db.query(
                 `UPDATE join_requests
                  SET status = 'rejected'
@@ -969,15 +1461,9 @@ router.post(
             const hostName =
                 `${request.host_first_name} ${request.host_last_name}`;
 
-            // Notify the requester
-            await db.query(
-                `INSERT INTO notifications
-                 (user_id, message)
-                 VALUES (?, ?)`,
-                [
-                    request.requester_id,
-                    `${hostName} rejected your request to join "${request.workout_title}".`
-                ]
+            await createNotification(
+                request.requester_id,
+                `${hostName} rejected your request to join "${request.workout_title}".`
             );
 
             res.redirect("/workout-requests");
@@ -996,201 +1482,208 @@ router.post(
     }
 );
 
-// =====================================================
-// CANCEL CREATED WORKOUT
-//===================================================== 
-router.post(
-    "/workouts/:id/cancel",
+//=====================================================
+// View Workout Group Chat
+//=====================================================
+
+router.get(
+    "/workouts/:id/chat",
     requireLogin,
     async (req, res) => {
         try {
-            const workoutId = req.params.id;
-            const userId = req.session.userId;
+            const workoutId = Number(req.params.id);
+            const userId = Number(req.session.userId);
 
-            const [result] = await db.query(
-                `UPDATE workouts
-                 SET status = 'cancelled'
-                 WHERE workout_id = ?
-                 AND user_id = ?`,
-                [workoutId, userId]
-            );
-
-            if (result.affectedRows === 0) {
-                return res.status(404).send(
-                    "Workout not found or you cannot cancel it."
+            if (!workoutId || !userId) {
+                return res.status(400).send(
+                    "Workout ID or logged-in user is missing."
                 );
             }
 
-            const [participants] = await db.query(
-                `SELECT user_id
-                 FROM workout_participants
+            const [workoutRows] = await db.query(
+                `SELECT
+                    workout_id,
+                    user_id AS creator_id,
+                    title,
+                    status
+                 FROM workouts
                  WHERE workout_id = ?`,
                 [workoutId]
             );
 
-            for (const participant of participants) {
-                await db.query(
-                    `INSERT INTO notifications
-                     (user_id, message)
-                     VALUES (?, ?)`,
-                    [
-                        participant.user_id,
-                        "A workout you joined has been cancelled."
-                    ]
+            if (workoutRows.length === 0) {
+                return res.status(404).send(
+                    "Workout not found."
                 );
             }
 
-            res.redirect("/my-workouts");
-        } catch (error) {
-            console.error("Cancel workout error:", error);
-            res.status(500).send(
-                "Error cancelling workout"
-            );
-        }
-    }
-);
+            const workout = workoutRows[0];
 
-// =====================================================
-// LEAVE JOINED WORKOUT
-// ===================================================== 
-router.post(
-    "/joined-workouts/:id/leave",
-    requireLogin,
-    async (req, res) => {
-        try {
-            const workoutId = req.params.id;
-            const userId = req.session.userId;
-
-            const [result] = await db.query(
-                `DELETE FROM workout_participants
+            const [participantRows] = await db.query(
+                `SELECT participant_id
+                 FROM workout_participants
                  WHERE workout_id = ?
-                 AND user_id = ?`,
+                   AND user_id = ?
+                 LIMIT 1`,
                 [workoutId, userId]
             );
 
-            if (result.affectedRows === 0) {
-                return res.status(404).send(
-                    "You are not currently part of this workout."
+            const isCreator =
+                Number(workout.creator_id) === userId;
+
+            const isParticipant =
+                participantRows.length > 0;
+
+            if (!isCreator && !isParticipant) {
+                return res.status(403).send(
+                    "You are not allowed to access this workout chat."
                 );
             }
 
-            await db.query(
-                `INSERT INTO notifications
-                 (user_id, message)
-                 VALUES (?, ?)`,
-                [
-                    userId,
-                    "You have left the workout session."
-                ]
+            const [messageRows] = await db.query(
+                `SELECT
+                    gm.group_message_id,
+                    gm.sender_id,
+                    gm.message,
+                    gm.created_at,
+                    u.first_name,
+                    u.last_name,
+                    u.profile_picture
+                 FROM workout_group_messages gm
+                 INNER JOIN users u
+                    ON gm.sender_id = u.user_id
+                 WHERE gm.workout_id = ?
+                 ORDER BY gm.created_at ASC`,
+                [workoutId]
             );
 
-            res.redirect("/joined-workouts");
+            const messages = messageRows.map(
+                (message) => ({
+                    ...message,
+                    displayTime: formatDate(
+                        message.created_at
+                    )
+                })
+            );
+
+            res.render("workout-chat", {
+                title: `${workout.title} Group Chat`,
+                workout,
+                messages,
+                currentUserId: userId
+            });
         } catch (error) {
-            console.error("Leave workout error:", error);
+            console.error(
+                "WORKOUT CHAT PAGE ERROR:",
+                error
+            );
+
             res.status(500).send(
-                "Error leaving workout"
+                error.sqlMessage ||
+                error.message ||
+                "Error loading workout group chat."
             );
         }
     }
 );
 
 //=====================================================
-// COMPLETE WORKOUT + UPDATE STREAK
-//===================================================== 
+// Send Workout Group Chat Message
+//=====================================================
+
 router.post(
-    "/workouts/:id/complete",
+    "/workouts/:id/chat",
     requireLogin,
     async (req, res) => {
         try {
-            const workoutId = req.params.id;
-            const userId = req.session.userId;
+            const workoutId = Number(req.params.id);
+            const userId = Number(req.session.userId);
+            const message = req.body.message?.trim();
 
-            const [workoutRows] = await db.query(
-                `SELECT workout_id
-                 FROM workouts
-                 WHERE workout_id = ?
-                 AND user_id = ?`,
-                [workoutId, userId]
-            );
-
-            if (workoutRows.length === 0) {
-                return res.status(403).send(
-                    "Only the workout creator can complete this workout."
+            if (!workoutId || !userId) {
+                return res.status(400).send(
+                    "Workout ID or logged-in user is missing."
                 );
             }
 
-            await db.query(
-                `UPDATE workouts
-                 SET status = 'completed'
+            if (!message) {
+                return res.status(400).send(
+                    "Please enter a message."
+                );
+            }
+
+            const [workoutRows] = await db.query(
+                `SELECT
+                    workout_id,
+                    user_id AS creator_id
+                 FROM workouts
                  WHERE workout_id = ?`,
                 [workoutId]
             );
 
-            const [historyRows] = await db.query(
-                `SELECT history_id
-                 FROM workout_history
-                 WHERE user_id = ?
-                 AND workout_id = ?
-                 LIMIT 1`,
-                [userId, workoutId]
-            );
-
-            if (historyRows.length === 0) {
-                await db.query(
-                    `INSERT INTO workout_history
-                     (user_id, workout_id, workout_date)
-                     VALUES (?, ?, CURDATE())`,
-                    [userId, workoutId]
+            if (workoutRows.length === 0) {
+                return res.status(404).send(
+                    "Workout not found."
                 );
             }
 
-            const [streakRows] = await db.query(
-                `SELECT *
-                 FROM streaks
-                 WHERE user_id = ?
-                 ORDER BY streak_id DESC
+            const workout = workoutRows[0];
+
+            const [participantRows] = await db.query(
+                `SELECT participant_id
+                 FROM workout_participants
+                 WHERE workout_id = ?
+                   AND user_id = ?
                  LIMIT 1`,
-                [userId]
+                [workoutId, userId]
             );
 
-            if (streakRows.length === 0) {
-                await db.query(
-                    `INSERT INTO streaks
-                     (
-                        user_id,
-                        current_streak,
-                        longest_streak,
-                        last_workout_date
-                     )
-                     VALUES (?, 1, 1, CURDATE())`,
-                    [userId]
-                );
-            } else {
-                await db.query(
-                    `UPDATE streaks
-                     SET current_streak =
-                            current_streak + 1,
-                         longest_streak =
-                            GREATEST(
-                                longest_streak,
-                                current_streak + 1
-                            ),
-                         last_workout_date = CURDATE()
-                     WHERE streak_id = ?`,
-                    [streakRows[0].streak_id]
+            const isCreator =
+                Number(workout.creator_id) === userId;
+
+            const isParticipant =
+                participantRows.length > 0;
+
+            if (!isCreator && !isParticipant) {
+                return res.status(403).send(
+                    "You are not allowed to send messages in this workout chat."
                 );
             }
 
-            res.redirect("/streaks");
+            await db.query(
+                `INSERT INTO workout_group_messages
+                 (
+                    workout_id,
+                    sender_id,
+                    message
+                 )
+                 VALUES (?, ?, ?)`,
+                [
+                    workoutId,
+                    userId,
+                    message
+                ]
+            );
+
+            res.redirect(
+                `/workouts/${workoutId}/chat`
+            );
         } catch (error) {
-            console.error("Complete workout error:", error);
+            console.error(
+                "SEND WORKOUT CHAT MESSAGE ERROR:",
+                error
+            );
+
             res.status(500).send(
-                "Error completing workout"
+                error.sqlMessage ||
+                error.message ||
+                "Error sending workout chat message."
             );
         }
     }
 );
 
+  
 //=====================================================
 // CALENDAR DOWNLOAD
 //=====================================================
