@@ -1,0 +1,86 @@
+extends layout
+
+block content
+    main.public-profile-page
+        .public-profile-header
+            .public-profile-user
+                if user.profile_picture
+                    img.public-profile-picture(
+                        src=user.profile_picture
+                        alt=`${user.first_name} ${user.last_name}`
+                    )
+                else
+                    .public-profile-picture-placeholder 👤
+
+                .public-profile-user-info
+                    h1 #{user.first_name} #{user.last_name}
+
+                    if user.fitness_goal
+                        p
+                            strong Fitness Goal:
+                            |  #{user.fitness_goal}
+                    else
+                        p
+                            strong Fitness Goal:
+                            |  Not set
+
+                    if user.profile_bio
+                        p.profile-bio= user.profile_bio
+                    else
+                        p.profile-bio No profile bio added yet.
+
+            .public-profile-actions
+                if isOwnProfile
+                    a.primary-button(
+                        href="/profile"
+                    ) View My Dashboard
+
+                    a.secondary-button(
+                        href="/profile/edit"
+                    ) Edit Profile
+                else
+                    a.primary-button(
+                        href=`/messages/${user.user_id}`
+                    ) 💬 Message
+
+        .public-profile-stats
+            .profile-stat-card
+                h2= currentStreak
+                p Current Streak
+
+            .profile-stat-card
+                h2= longestStreak
+                p Longest Streak
+
+            .profile-stat-card
+                h2= completedWorkouts
+                p Completed Workouts
+
+        section.public-profile-history
+            h2 Recent Completed Workouts
+
+            if recentWorkouts && recentWorkouts.length > 0
+                .recent-workouts-list
+                    each workout in recentWorkouts
+                        article.recent-workout-card
+                            h3= workout.title
+
+                            p
+                                strong Type:
+                                |  #{workout.workout_type || "Not set"}
+
+                            p
+                                strong Location:
+                                |  #{workout.location || "Not set"}
+
+                            p
+                                strong Completed:
+                                |  #{workout.workout_date ? new Date(workout.workout_date).toLocaleDateString("en-GB") : "Unknown"}
+            else
+                p No completed workouts yet.
+
+        br
+
+        a(
+            href="/recommendations"
+        ) ← Back to Recommendations

@@ -495,6 +495,139 @@ router.post(
 );
 
 // =====================================================
+// PUBLIC USER PROFILE
+// =====================================================
+
+router.get(
+    "/users/:id",
+    requireLogin,
+    async (req, res) => {
+        try {
+            const profileUserId =
+                Number(req.params.id);
+
+            const currentUserId =
+                Number(req.session.userId);
+
+            if (!profileUserId) {
+                return res.status(400).send(
+                    "User ID is missing."
+                );
+            }
+
+            // Load public user information
+            const [userRows] = await db.query(
+                `SELECT
+                    user_id,
+                    first_name,
+                    last_name,
+                    fitness_goal,
+                    profile_bio,
+                    profile_picture,
+                    created_at
+                 FROM users
+                 WHERE user_id = ?
+                 LIMIT 1`,
+                [profileUserId]
+            );
+
+            if (userRows.length === 0) {
+                return res.status(404).send(
+                    "User not found."
+                );
+            }
+
+            const user = userRows[0];
+
+            // Load streak information
+            const [streakRows] = await db.query(
+                `SELECT
+                    current_streak,
+                    longest_streak,
+                    last_workout_date
+                 FROM streaks
+                 WHERE user_id = ?
+                 ORDER BY streak_id DESC
+                 LIMIT 1`,
+                [profileUserId]
+            );
+
+            const streak =
+                streakRows.length > 0
+                    ? streakRows[0]
+                    : {
+                        current_streak: 0,
+                        longest_streak: 0,
+                        last_workout_date: null
+                    };
+
+            // Count completed workouts
+            const [[completedResult]] =
+                await db.query(
+                    `SELECT COUNT(*) AS total
+                     FROM workout_history
+                     WHERE user_id = ?`,
+                    [profileUserId]
+                );
+
+            // Load recent completed workouts
+            const [recentWorkouts] =
+                await db.query(
+                    `SELECT
+                        wh.workout_id,
+                        wh.workout_date,
+                        w.title,
+                        w.workout_type,
+                        w.location
+                     FROM workout_history wh
+                     INNER JOIN workouts w
+                        ON wh.workout_id =
+                           w.workout_id
+                     WHERE wh.user_id = ?
+                     ORDER BY
+                        wh.workout_date DESC,
+                        wh.created_at DESC
+                     LIMIT 5`,
+                    [profileUserId]
+                );
+
+            res.render("public-profile", {
+                title:
+                    `${user.first_name} ${user.last_name}`,
+                user,
+                currentStreak:
+                    Number(
+                        streak.current_streak || 0
+                    ),
+                longestStreak:
+                    Number(
+                        streak.longest_streak || 0
+                    ),
+                completedWorkouts:
+                    Number(
+                        completedResult.total || 0
+                    ),
+                recentWorkouts,
+                currentUserId,
+                isOwnProfile:
+                    currentUserId === profileUserId
+            });
+        } catch (error) {
+            console.error(
+                "PUBLIC PROFILE ERROR:",
+                error
+            );
+
+            res.status(500).send(
+                error.sqlMessage ||
+                error.message ||
+                "Error loading public profile."
+            );
+        }
+    }
+);
+
+// =====================================================
 // LOGOUT
 // =====================================================
 

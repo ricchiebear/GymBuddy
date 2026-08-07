@@ -1,26 +1,72 @@
-doctype html 
-html 
-    head 
-        title = GymBuddy 
-        link(rel="stylesheet", href="/CSS/style.css")
-        body 
-            nav 
-            a(href="/") Home
-            a(href="/register") Register
-            a(href="/login") Login
-            a(href="/profile") Profile
-            a(href="/workouts") Workouts
-            a(href="/logout") Logout    
-            a(href="help") Help 
-            a(href="/streaks") Streaks
-            a(href="/messages") Messages
-            a(href="/workout/create") Create Workout
-            a(href="/workout-requests") Requests
-            a(href="/my-workouts") My Workouts
-            a(href="/help") Help 
-            a(href="/support") Contact Support 
-            a(href="/support/tickets") Ticket
-            a(href="/joined-workouts") Joined Workouts 
+doctype html
 
-        main 
+html
+    head
+        meta(charset="UTF-8")
+        meta(
+            name="viewport"
+            content="width=device-width, initial-scale=1.0"
+        )
+
+        title= title ? `${title} | GymBuddy` : "GymBuddy"
+
+        link(
+            rel="stylesheet"
+            href="/css/style.css"
+        )
+
+    body
+
+        //=====================================================
+        // MAIN NAVIGATION
+        //=====================================================
+
+        nav.main-navigation
+
+            // Home is available to everyone
+            a(
+                href="/"
+            ) 🏠 Home
+
+            if isLoggedIn
+
+                a(
+                    href="/workouts"
+                ) 🏋️ Workouts
+
+                a(
+                    href="/recommendations"
+                ) 🤝 Recommendations
+
+                a(
+                    href="/messages"
+                ) 💬 Messages
+
+                a(
+                    href="/notifications"
+                ) 🔔 Notifications
+
+                a(
+                    href="/profile"
+                ) 👤 My Profile
+
+                a(
+                    href="/logout"
+                ) Logout
+
+            else
+
+                a(
+                    href="/register"
+                ) Register
+
+                a(
+                    href="/login"
+                ) Login
+
+        //=====================================================
+        // PAGE CONTENT
+        //=====================================================
+
+        main
             block content

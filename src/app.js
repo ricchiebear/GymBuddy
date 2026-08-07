@@ -14,6 +14,7 @@ const messagesRoutes = require("./routes/messages");
 const privateMessagesRoutes = require("./routes/privateMessages");
 const reportRoutes = require("./routes/report");
 const helpRoutes = require("./routes/help");
+const recommendationRoutes = require("./routes/recommendation");
 
 const app = express();
 
@@ -38,6 +39,32 @@ app.get("/session-check", (req, res) => {
         userName: req.session.userName || null,
     });
 });
+
+
+//=====================================================
+// GLOBAL LOGIN INFORMATION FOR PUG VIEWS
+//=====================================================
+
+app.use((req, res, next) => {
+    res.locals.isLoggedIn =
+        Boolean(
+            req.session &&
+            req.session.userId
+        );
+
+    res.locals.loggedInUserId =
+        req.session && req.session.userId
+            ? Number(req.session.userId)
+            : null;
+
+    res.locals.loggedInUserName =
+        req.session && req.session.userName
+            ? req.session.userName
+            : null;
+
+    next();
+});
+
 
 // --------------------------------------------------
 // MIDDLEWARE
@@ -97,7 +124,7 @@ app.use("/", messagesRoutes);
 app.use("/", privateMessagesRoutes);
 app.use("/", reportRoutes);
 app.use("/", helpRoutes);
-
+app.use("/", recommendationRoutes);
 // --------------------------------------------------
 // EXPORT
 // --------------------------------------------------

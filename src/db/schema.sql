@@ -264,3 +264,19 @@ CREATE TABLE workout_group_messages (
         REFERENCES users(user_id)
         ON DELETE CASCADE
 );
+
+CREATE TABLE user_preferences (
+    preference_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL UNIQUE,
+
+    preferred_workout_type VARCHAR(100),
+    preferred_location VARCHAR(150),
+    preferred_training_time VARCHAR(50),
+    experience_level VARCHAR(50),
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE
+);

@@ -1,0 +1,97 @@
+extends layout
+
+block content
+    main.recommendations-page
+        .page-header
+            div
+                h1 🤝 Recommended Workout Partners
+
+                p
+                    | Based on your fitness goal, workout history,
+                    | consistency and workout interests.
+
+        if currentUser
+            .recommendation-summary
+                h2 Your Matching Profile
+
+                p
+                    strong Fitness Goal:
+                    |  #{currentUser.fitness_goal || "Not set"}
+
+                p
+                    strong Current Streak:
+                    |  #{currentUser.current_streak || 0} day#{Number(currentUser.current_streak) === 1 ? "" : "s"}
+
+                p
+                    strong Completed Workouts:
+                    |  #{currentUser.completedWorkouts || 0}
+
+        if !recommendations || recommendations.length === 0
+            .empty-state
+                h2 No recommendations yet
+                p Complete workouts and update your fitness goal to improve your recommendations.
+
+        else
+            .recommendations-grid
+                each partner, index in recommendations
+                    article.recommendation-card
+                        .recommendation-ranking
+                            span Rank ##{index + 1}
+
+                        .recommendation-profile
+                            if partner.profile_picture
+                                img.recommendation-avatar(
+                                    src=partner.profile_picture
+                                    alt=`${partner.first_name} ${partner.last_name}`
+                                )
+                            else
+                                .recommendation-avatar-placeholder 👤
+
+                            .recommendation-user-details
+                                h2
+                                    | #{partner.first_name} #{partner.last_name}
+
+                                p
+                                    strong Fitness Goal:
+                                    |  #{partner.fitness_goal || "Not set"}
+
+                        .compatibility-section
+                            h3
+                                | #{partner.compatibility}% Match
+
+                            if partner.compatibility >= 80
+                                p.match-level Excellent Match
+                            else if partner.compatibility >= 60
+                                p.match-level Strong Match
+                            else if partner.compatibility >= 40
+                                p.match-level Possible Match
+                            else
+                                p.match-level Low Match
+
+                        .recommendation-stats
+                            p
+                                strong 🔥 Current Streak:
+                                |  #{partner.current_streak || 0} day#{Number(partner.current_streak) === 1 ? "" : "s"}
+
+                            p
+                                strong 🏋️ Completed Workouts:
+                                |  #{partner.completedWorkouts || 0}
+
+                        .match-reasons
+                            h3 Why this person?
+
+                            if partner.matchReasons && partner.matchReasons.length > 0
+                                ul
+                                    each reason in partner.matchReasons
+                                        li ✓ #{reason}
+                            else
+                                p There is not enough matching data yet.
+
+                        .recommendation-actions
+                            a.secondary-button(
+                                href=`/messages/${partner.user_id}`
+                            ) 💬 Message
+
+                            a.secondary-button(
+                                href=`/users/${partner.user_id}`
+                            ) 👤 View Profile

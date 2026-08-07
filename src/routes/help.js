@@ -3,6 +3,10 @@ const db = require("../config/database");
 
 const router = express.Router();
 
+//=====================================================
+// LOGIN PROTECTION
+//=====================================================
+
 function requireLogin(req, res, next) {
     if (!req.session || !req.session.userId) {
         return res.redirect("/login");
@@ -11,13 +15,39 @@ function requireLogin(req, res, next) {
     next();
 }
 
-// Show support form
+//=====================================================
+// HELP CENTRE
+//=====================================================
+
+/*
+ * The Help Centre is public.
+ *
+ * This means users can read common help information
+ * even if they are having problems logging in.
+ *
+ * Support ticket submission still requires login.
+ */
+
+router.get(
+    "/help",
+    (req, res) => {
+        res.render("help", {
+            title: "Help Centre"
+        });
+    }
+);
+
+//=====================================================
+// SHOW SUPPORT FORM
+//=====================================================
+
 router.get(
     "/support",
     requireLogin,
     async (req, res) => {
         try {
-            const userId = Number(req.session.userId);
+            const userId =
+                Number(req.session.userId);
 
             const [users] = await db.query(
                 `SELECT email
@@ -52,21 +82,32 @@ router.get(
     }
 );
 
-// Submit support ticket
+//=====================================================
+// SUBMIT SUPPORT TICKET
+//=====================================================
+
 router.post(
     "/support",
     requireLogin,
     async (req, res) => {
         try {
-            const userId = Number(req.session.userId);
+            const userId =
+                Number(req.session.userId);
 
-            const email = req.body.email?.trim();
+            const email =
+                req.body.email?.trim();
+
             const issueType =
                 req.body.issue_type?.trim();
+
             const message =
                 req.body.message?.trim();
 
-            if (!email || !issueType || !message) {
+            if (
+                !email ||
+                !issueType ||
+                !message
+            ) {
                 return res.status(400).send(
                     "Please complete all support fields."
                 );
@@ -90,7 +131,9 @@ router.post(
                 ]
             );
 
-            res.redirect("/my-support-tickets");
+            res.redirect(
+                "/my-support-tickets"
+            );
         } catch (error) {
             console.error(
                 "SUBMIT SUPPORT TICKET ERROR:",
@@ -106,13 +149,17 @@ router.post(
     }
 );
 
-// View logged-in user’s tickets
+//=====================================================
+// VIEW LOGGED-IN USER'S SUPPORT TICKETS
+//=====================================================
+
 router.get(
     "/my-support-tickets",
     requireLogin,
     async (req, res) => {
         try {
-            const userId = Number(req.session.userId);
+            const userId =
+                Number(req.session.userId);
 
             const [tickets] = await db.query(
                 `SELECT
@@ -128,10 +175,14 @@ router.get(
                 [userId]
             );
 
-            res.render("my-support-tickets", {
-                title: "My Support Tickets",
-                tickets
-            });
+            res.render(
+                "my-support-tickets",
+                {
+                    title:
+                        "My Support Tickets",
+                    tickets
+                }
+            );
         } catch (error) {
             console.error(
                 "MY SUPPORT TICKETS ERROR:",
@@ -147,14 +198,26 @@ router.get(
     }
 );
 
-// View one ticket
+//=====================================================
+// VIEW ONE SUPPORT TICKET
+//=====================================================
+
 router.get(
     "/support-tickets/:id",
     requireLogin,
     async (req, res) => {
         try {
-            const ticketId = Number(req.params.id);
-            const userId = Number(req.session.userId);
+            const ticketId =
+                Number(req.params.id);
+
+            const userId =
+                Number(req.session.userId);
+
+            if (!ticketId) {
+                return res.status(400).send(
+                    "Support ticket ID is missing."
+                );
+            }
 
             const [tickets] = await db.query(
                 `SELECT
@@ -168,7 +231,10 @@ router.get(
                  WHERE ticket_id = ?
                    AND user_id = ?
                  LIMIT 1`,
-                [ticketId, userId]
+                [
+                    ticketId,
+                    userId
+                ]
             );
 
             if (tickets.length === 0) {
@@ -177,10 +243,14 @@ router.get(
                 );
             }
 
-            res.render("support-ticket-details", {
-                title: `Support Ticket #${ticketId}`,
-                ticket: tickets[0]
-            });
+            res.render(
+                "support-ticket-details",
+                {
+                    title:
+                        `Support Ticket #${ticketId}`,
+                    ticket: tickets[0]
+                }
+            );
         } catch (error) {
             console.error(
                 "SUPPORT TICKET DETAILS ERROR:",
