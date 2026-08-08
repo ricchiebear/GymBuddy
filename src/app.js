@@ -15,7 +15,7 @@ const privateMessagesRoutes = require("./routes/privateMessages");
 const reportRoutes = require("./routes/report");
 const helpRoutes = require("./routes/help");
 const recommendationRoutes = require("./routes/recommendation");
-
+const chatbotRoutes = require("./routes/chatbot");
 const app = express();
 
 // --------------------------------------------------
@@ -125,6 +125,7 @@ app.use("/", privateMessagesRoutes);
 app.use("/", reportRoutes);
 app.use("/", helpRoutes);
 app.use("/", recommendationRoutes);
+app.use("/", chatbotRoutes);
 // --------------------------------------------------
 // EXPORT
 // --------------------------------------------------

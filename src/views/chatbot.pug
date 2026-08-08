@@ -1,0 +1,119 @@
+extends layout
+
+block content
+    main.ai-coach-page
+        h1 🤖 GymBuddy AI Coach
+
+        p
+            | Ask GymBuddy questions about workouts,
+            | fitness and your training journey.
+
+        //=====================================================
+        // NEW CHAT
+        //=====================================================
+
+        form(
+            method="POST"
+            action="/ai-coach/new"
+        )
+            button(
+                type="submit"
+            ) + New Chat
+
+        hr
+
+        //=====================================================
+        // CHAT HISTORY
+        //=====================================================
+
+        section.ai-chat-history
+            h2 Chat History
+
+            if conversations && conversations.length > 0
+                ul
+                    each conversation in conversations
+                        li
+                            if Number(conversation.conversation_id) === Number(activeConversationId)
+                                strong
+                                    a(
+                                        href=`/ai-coach/conversations/${conversation.conversation_id}`
+                                    )= conversation.title || "Untitled Conversation"
+                            else
+                                a(
+                                    href=`/ai-coach/conversations/${conversation.conversation_id}`
+                                )= conversation.title || "Untitled Conversation"
+            else
+                p No previous conversations yet.
+
+        hr
+
+        //=====================================================
+        // ACTIVE CONVERSATION
+        //=====================================================
+
+        section.ai-active-conversation
+            if activeConversation
+                h2= activeConversation.title || "Conversation"
+            else
+                h2 New Conversation
+
+            .chat-container
+                if messages && messages.length > 0
+                    each item in messages
+                        if item.role === "user" || item.sender === "user"
+                            article.chat-message.user-message
+                                strong You
+                                p= item.message
+
+                                if item.created_at
+                                    small= new Date(item.created_at).toLocaleString("en-GB")
+
+                        else if item.role === "assistant" || item.sender === "assistant"
+                            article.chat-message.ai-message
+                                strong GymBuddy AI Coach
+                                p= item.message
+
+                                if item.created_at
+                                    small= new Date(item.created_at).toLocaleString("en-GB")
+
+                else
+                    .chat-empty-state
+                        p
+                            | Start a conversation with your AI Coach.
+
+                        p
+                            | You can ask about fitness,
+                            | workouts, your GymBuddy progress
+                            | and other training questions.
+
+        //=====================================================
+        // MESSAGE FORM
+        //=====================================================
+
+        section.ai-message-form
+            form(
+                method="POST"
+                action="/ai-coach"
+            )
+
+                if activeConversationId
+                    input(
+                        type="hidden"
+                        name="conversation_id"
+                        value=activeConversationId
+                    )
+
+                label(
+                    for="message"
+                ) Message
+
+                textarea(
+                    id="message"
+                    name="message"
+                    placeholder="Ask your AI Coach something..."
+                    required
+                )
+
+                button(
+                    type="submit"
+                ) Send

@@ -28,38 +28,54 @@ html
                 href="/"
             ) 🏠 Home
 
+
+
             if isLoggedIn
+
 
                 a(
                     href="/workouts"
                 ) 🏋️ Workouts
 
+
                 a(
                     href="/recommendations"
                 ) 🤝 Recommendations
+
+
+                a(
+                |   href="/ai-coach"
+                ) 🤖 AI Coach    
+
 
                 a(
                     href="/messages"
                 ) 💬 Messages
 
+
                 a(
                     href="/notifications"
                 ) 🔔 Notifications
+
 
                 a(
                     href="/profile"
                 ) 👤 My Profile
 
+
                 a(
                     href="/logout"
                 ) Logout
 
+
             else
+
 
                 a(
                     href="/register"
                 ) Register
 
+    
                 a(
                     href="/login"
                 ) Login
