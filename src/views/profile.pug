@@ -1,78 +1,315 @@
 extends layout
 
 block content
-  main.dashboard
 
-    section.profile-card
-      h1 👤 My Profile
+  main.profile-page
 
-      .profile-content
-        if user.profile_picture
-          img.profile-avatar(
-            src=user.profile_picture
-            alt="Profile picture"
-          )
+    //=====================================================
+    // PROFILE HEADER
+    //=====================================================
+
+    section.profile-hero
+
+      .profile-hero-main
+
+        .profile-avatar-wrap
+
+          if user.profile_picture
+            img.profile-avatar-large(
+              src=user.profile_picture
+              alt=`${user.first_name} ${user.last_name}`
+            )
+
+          else
+            .profile-avatar-large.profile-avatar-placeholder
+              | 👤
+
+
+        .profile-hero-info
+
+          p.profile-eyebrow
+            | MY GYMBUDDY PROFILE
+
+          h1
+            | #{user.first_name} #{user.last_name}
+
+          p.profile-email
+            | #{user.email}
+
+          .profile-badges
+
+            span.profile-badge
+              | 🎯 #{user.fitness_goal.replaceAll("_", " ")}
+
+            span.profile-badge
+              | 🔥 #{currentStreak} day#{currentStreak === 1 ? "" : "s"} streak
+
+
+      .profile-hero-actions
+
+        a.primary-button(
+          href="/profile/edit"
+        )
+          | Edit Profile
+
+        a.secondary-button(
+          href="/recommendations"
+        )
+          | View Matches
+
+
+    //=====================================================
+    // PROFILE BIO
+    //=====================================================
+
+    section.profile-section
+
+      .profile-section-heading
+
+        div
+
+          p.profile-eyebrow
+            | ABOUT ME
+
+          h2 Profile Bio
+
+
+      .profile-bio-card
+
+        if user.profile_bio
+
+          p
+            = user.profile_bio
+
         else
-          .profile-avatar.profile-placeholder 👤
 
-        .profile-text
-          h2 #{user.first_name} #{user.last_name}
-          p 📧 #{user.email}
-          p 🎯 #{user.fitness_goal.replaceAll("_", " ")}
-          p 📝 #{user.profile_bio || "No bio added yet"}
+          .profile-empty-content
 
-    section.dashboard-section
-      h2 Quick Actions
+            span
+              | 📝
 
-      .action-grid
-        a.action-card(href="/profile/edit")
-          span.action-icon ✏️
-          span Edit Profile
+            div
 
-        a.action-card(href="/workouts/create")
-          span.action-icon ➕
-          span Create Workout
+              strong
+                | No bio added yet
 
-        a.action-card(href="/my-workouts")
-          span.action-icon 🏋️
-          span My Workouts
+              p
+                | Add a short introduction so other GymBuddy
+                | users can learn more about you.
 
-        a.action-card(href="/workout-requests")
-          span.action-icon 🤝
-          span Workout Requests
+              a(
+                href="/profile/edit"
+              )
+                | Add Bio →
 
-        a.action-card(href="/joined-workouts")
-          span.action-icon 🏃
-          span Joined Workouts
 
-        a.action-card(href="/notifications")
-          span.action-icon 🔔
-          span Notifications
+    //=====================================================
+    // ACTIVITY STATISTICS
+    //=====================================================
 
-        a.action-card(href="/messages")
-          span.action-icon 💬
-          span Messages
+    section.profile-section
 
-    section.dashboard-section
-      h2 My Activity
+      .profile-section-heading
+
+        div
+
+          p.profile-eyebrow
+            | MY ACTIVITY
+
+          h2 Your GymBuddy progress
+
 
       .stats-grid
-        .stat-card
-          span.stat-icon 🏋️
-          strong= workoutsCreated
-          p Workouts Created
 
         .stat-card
-          span.stat-icon 👥
-          strong= workoutPartners
-          p Workout Partners
+
+          span.stat-icon
+            | 🏋️
+
+          strong
+            = workoutsCreated
+
+          p
+            | Workouts Created
+
 
         .stat-card
-          span.stat-icon 🔥
-          strong #{currentStreak} Days
-          p Current Streak
+
+          span.stat-icon
+            | 👥
+
+          strong
+            = workoutPartners
+
+          p
+            | Workout Partners
+
 
         .stat-card
-          span.stat-icon ⭐
-          strong= sessionsJoined
-          p Sessions Joined
+
+          span.stat-icon
+            | 🔥
+
+          strong
+            | #{currentStreak} Day#{currentStreak === 1 ? "" : "s"}
+
+          p
+            | Current Streak
+
+
+        .stat-card
+
+          span.stat-icon
+            | ⭐
+
+          strong
+            = sessionsJoined
+
+          p
+            | Sessions Joined
+
+
+    //=====================================================
+    // QUICK ACTIONS
+    //=====================================================
+
+    section.profile-section
+
+      .profile-section-heading
+
+        div
+
+          p.profile-eyebrow
+            | QUICK ACCESS
+
+          h2 Manage your GymBuddy account
+
+
+      .profile-action-grid
+
+        a.profile-action-card(
+          href="/profile/edit"
+        )
+
+          span.profile-action-icon
+            | ✏️
+
+          div
+
+            h3
+              | Edit Profile
+
+            p
+              | Update your details, bio and profile picture.
+
+
+        a.profile-action-card(
+          href="/workouts/create"
+        )
+
+          span.profile-action-icon
+            | ➕
+
+          div
+
+            h3
+              | Create Workout
+
+            p
+              | Create a new workout for other users to join.
+
+
+        a.profile-action-card(
+          href="/my-workouts"
+        )
+
+          span.profile-action-icon
+            | 🏋️
+
+          div
+
+            h3
+              | My Workouts
+
+            p
+              | Manage workouts you have created.
+
+
+        a.profile-action-card(
+          href="/joined-workouts"
+        )
+
+          span.profile-action-icon
+            | 🏃
+
+          div
+
+            h3
+              | Joined Workouts
+
+            p
+              | View training sessions you have joined.
+
+
+        a.profile-action-card(
+          href="/workout-requests"
+        )
+
+          span.profile-action-icon
+            | 🤝
+
+          div
+
+            h3
+              | Workout Requests
+
+            p
+              | Review pending workout participation requests.
+
+
+        a.profile-action-card(
+          href="/messages"
+        )
+
+          span.profile-action-icon
+            | 💬
+
+          div
+
+            h3
+              | Messages
+
+            p
+              | Stay connected with workout partners.
+
+
+        a.profile-action-card(
+          href="/notifications"
+        )
+
+          span.profile-action-icon
+            | 🔔
+
+          div
+
+            h3
+              | Notifications
+
+            p
+              | Check your latest GymBuddy updates.
+
+
+        a.profile-action-card(
+          href="/ai-coach"
+        )
+
+          span.profile-action-icon
+            | 🤖
+
+          div
+
+            h3
+              | AI Coach
+
+            p
+              | Get personalised fitness support and guidance.

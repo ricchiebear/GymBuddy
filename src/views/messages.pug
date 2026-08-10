@@ -1,56 +1,193 @@
 extends layout
 
 block content
-    main.messages-page
-        h1 Messages
 
-        if pendingRequestCount > 0
-            p
-                a(href="/message-requests")
-                    | You have #{pendingRequestCount} pending message request#{pendingRequestCount === 1 ? "" : "s"}
+    main.messages-app
 
-        h2 Conversations
+        .messages-shell
 
-        if conversations && conversations.length > 0
-            each conversation in conversations
-                .conversation-card
-                    if conversation.partner_profile_picture
-                        img(
-                            src=conversation.partner_profile_picture
-                            alt=`${conversation.partner_first_name} ${conversation.partner_last_name}`
-                            width="50"
-                            height="50"
+            //=====================================================
+            // LEFT PANEL - CONVERSATIONS
+            //=====================================================
+
+            aside.messages-sidebar
+
+                .messages-sidebar-header
+
+                    div
+                        h1 Messages
+
+                        p
+                            | Stay connected with your workout partners.
+
+                    if pendingRequestCount > 0
+
+                        a.message-request-badge(
+                            href="/message-requests"
                         )
+                            | #{pendingRequestCount} request#{pendingRequestCount === 1 ? "" : "s"}
+
+
+                //=================================================
+                // CONVERSATION LIST
+                //=================================================
+
+                .messages-section
+
+                    .messages-section-header
+
+                        h2 Conversations
+
+                    if conversations && conversations.length > 0
+
+                        .conversation-list
+
+                            each conversation in conversations
+
+                                a.conversation-item(
+                                    href=`/messages/${conversation.partner_id}`
+                                )
+
+                                    .conversation-avatar
+
+                                        if conversation.partner_profile_picture
+
+                                            img(
+                                                src=conversation.partner_profile_picture
+                                                alt=`${conversation.partner_first_name} ${conversation.partner_last_name}`
+                                            )
+
+                                        else
+
+                                            span
+                                                | 👤
+
+
+                                    .conversation-content
+
+                                        .conversation-top-row
+
+                                            strong
+                                                | #{conversation.partner_first_name} #{conversation.partner_last_name}
+
+                                            if conversation.created_at
+
+                                                small
+                                                    = new Date(conversation.created_at).toLocaleString("en-GB")
+
+
+                                        p.conversation-preview
+                                            = conversation.message
+
+
                     else
-                        span 👤
 
-                    .conversation-details
-                        h3
-                            a(href=`/messages/${conversation.partner_id}`)
-                                | #{conversation.partner_first_name} #{conversation.partner_last_name}
+                        .messages-empty-state
 
-                        p= conversation.message
+                            span
+                                | 💬
 
-                        small= new Date(conversation.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
-        else
-            p You do not have any conversations yet.
+                            h3 No conversations yet
 
-        h2 Start a Conversation
+                            p
+                                | Start a conversation with another
+                                | GymBuddy user below.
 
-        if users && users.length > 0
-            each user in users
-                .user-card
-                    if user.profile_picture
-                        img(
-                            src=user.profile_picture
-                            alt=`${user.first_name} ${user.last_name}`
-                            width="45"
-                            height="45"
-                        )
+
+                //=================================================
+                // START A NEW CONVERSATION
+                //=================================================
+
+                .messages-section
+
+                    .messages-section-header
+
+                        h2 Start a Conversation
+
+                    if users && users.length > 0
+
+                        .message-user-list
+
+                            each user in users
+
+                                a.message-user-item(
+                                    href=`/messages/${user.user_id}`
+                                )
+
+                                    .conversation-avatar
+
+                                        if user.profile_picture
+
+                                            img(
+                                                src=user.profile_picture
+                                                alt=`${user.first_name} ${user.last_name}`
+                                            )
+
+                                        else
+
+                                            span
+                                                | 👤
+
+
+                                    .message-user-info
+
+                                        strong
+                                            | #{user.first_name} #{user.last_name}
+
+                                        span
+                                            | Start chatting
+
+
                     else
-                        span 👤
 
-                    a(href=`/messages/${user.user_id}`)
-                        | #{user.first_name} #{user.last_name}
-        else
-            p No other users are available.
+                        p.messages-muted
+                            | No other users are available.
+
+
+            //=====================================================
+            // RIGHT PANEL - WELCOME
+            //=====================================================
+
+            section.messages-welcome-panel
+
+                .messages-welcome-content
+
+                    .messages-welcome-icon
+                        | 💬
+
+                    h2 Your GymBuddy Messages
+
+                    p
+                        | Select a conversation from the left
+                        | or start a new one with another GymBuddy user.
+
+                    .messages-welcome-features
+
+                        .messages-welcome-feature
+
+                            span
+                                | 🤝
+
+                            div
+                                strong Stay Connected
+                                p Chat with workout partners.
+
+
+                        .messages-welcome-feature
+
+                            span
+                                | 🏋️
+
+                            div
+                                strong Plan Sessions
+                                p Coordinate upcoming workouts.
+
+
+                        .messages-welcome-feature
+
+                            span
+                                | 🔒
+
+                            div
+                                strong Private Conversations
+                                p Messages stay between GymBuddy users.

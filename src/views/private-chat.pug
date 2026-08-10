@@ -1,107 +1,230 @@
 extends layout
 
 block content
-    main.private-chat-page
 
-        h1 Private Chat
+    main.private-chat-app
 
-        .chat-partner
-            if partner.profile_picture
-                img(
-                    src=partner.profile_picture
-                    alt=`${partner.first_name} ${partner.last_name}`
-                    width="55"
-                    height="55"
-                )
-            else
-                span 👤
+        .private-chat-shell
 
-            h2 #{partner.first_name} #{partner.last_name}
+            //=====================================================
+            // CHAT HEADER
+            //=====================================================
 
-        if canMessage
+            header.private-chat-header
 
-            .private-messages
+                .private-chat-header-left
 
-                if messages && messages.length > 0
+                    a.private-chat-back(
+                        href="/messages"
+                        aria-label="Back to messages"
+                    ) ←
 
-                    each msg in messages
+                    .private-chat-partner-avatar
 
-                        article.private-message(
-                            class=Number(msg.sender_id) === Number(currentUserId)
-                                ? "sent-message"
-                                : "received-message"
+                        if partner.profile_picture
+
+                            img(
+                                src=partner.profile_picture
+                                alt=`${partner.first_name} ${partner.last_name}`
+                            )
+
+                        else
+
+                            span 👤
+
+
+                    .private-chat-partner-info
+
+                        h1
+                            | #{partner.first_name} #{partner.last_name}
+
+                        if canMessage
+
+                            .private-chat-status
+
+                                span.private-chat-status-dot
+
+                                span GymBuddy conversation
+
+                        if !canMessage
+
+                            p.private-chat-status-text
+                                | Message request required
+
+
+                a.private-chat-profile-link(
+                    href=`/users/${partner.user_id}`
+                ) View Profile
+
+
+            //=====================================================
+            // NORMAL PRIVATE CHAT
+            //=====================================================
+
+            if canMessage
+
+                section.private-message-area
+
+                    if messages && messages.length > 0
+
+                        each msg in messages
+
+                            if Number(msg.sender_id) === Number(currentUserId)
+
+                                .private-message-row.private-message-row-sent
+
+                                    .private-message-bubble.private-message-bubble-sent
+
+                                        p.private-message-text
+                                            = msg.message
+
+                                        if msg.displayTime
+
+                                            small.private-message-time
+                                                = msg.displayTime
+
+
+                            if Number(msg.sender_id) !== Number(currentUserId)
+
+                                .private-message-row.private-message-row-received
+
+                                    .private-message-sender-avatar
+
+                                        if msg.sender_profile_picture
+
+                                            img(
+                                                src=msg.sender_profile_picture
+                                                alt=`${msg.sender_first_name} ${msg.sender_last_name}`
+                                            )
+
+                                        else
+
+                                            span 👤
+
+
+                                    .private-message-bubble.private-message-bubble-received
+
+                                        strong.private-message-sender-name
+                                            | #{msg.sender_first_name} #{msg.sender_last_name}
+
+                                        p.private-message-text
+                                            = msg.message
+
+                                        if msg.displayTime
+
+                                            small.private-message-time
+                                                = msg.displayTime
+
+
+                    else
+
+                        .private-chat-empty
+
+                            .private-chat-empty-icon
+                                | 💬
+
+                            h2 Start the conversation
+
+                            p
+                                | Send a message to #{partner.first_name}
+                                | and start planning your next workout.
+
+
+                footer.private-chat-composer
+
+                    form.private-chat-form(
+                        method="POST"
+                        action=`/messages/${partner.user_id}`
+                    )
+
+                        textarea.private-chat-input(
+                            id="message"
+                            name="message"
+                            placeholder=`Message ${partner.first_name}...`
+                            rows="1"
+                            required
                         )
 
-                            .message-sender
+                        button.private-chat-send-button(
+                            type="submit"
+                            aria-label="Send message"
+                        )
 
-                                if msg.sender_profile_picture
-                                    img(
-                                        src=msg.sender_profile_picture
-                                        alt=`${msg.sender_first_name} ${msg.sender_last_name}`
-                                        width="40"
-                                        height="40"
-                                    )
-                                else
-                                    span 👤
 
-                                strong #{msg.sender_first_name} #{msg.sender_last_name}
+            //=====================================================
+            // NON-MESSAGEABLE STATES
+            //=====================================================
 
-                            p.message-text= msg.message
+            if !canMessage
 
-                            small.message-time= msg.displayTime
+                if requestStatus && requestStatus.toLowerCase() === "pending"
 
-                else
+                    section.private-chat-state
 
-                    p No messages yet. Start the conversation.
+                        .private-chat-state-icon
+                            | ⏳
 
-            form(
-                method="POST"
-                action=`/messages/${partner.user_id}`
-            )
+                        h2 Message request pending
 
-                label(for="message") Message
+                        p
+                            | Your request to message #{partner.first_name}
+                            | is still waiting for approval.
 
-                textarea(
-                    id="message"
-                    name="message"
-                    placeholder="Type your message..."
-                    required
-                )
+                        a.secondary-button(
+                            href="/messages"
+                        ) Back to Messages
 
-                button(type="submit") Send
 
-        else if requestStatus && requestStatus.toLowerCase() === "pending"
+                if requestStatus && requestStatus.toLowerCase() === "rejected"
 
-            p Your message request is still pending.
+                    section.private-chat-state
 
-        else if requestStatus && requestStatus.toLowerCase() === "rejected"
+                        .private-chat-state-icon
+                            | ❌
 
-            p Your previous message request was rejected.
+                        h2 Message request rejected
 
-        else
+                        p
+                            | Your previous request to message
+                            | #{partner.first_name} was rejected.
 
-            p You are not matched with this user yet.
+                        a.secondary-button(
+                            href="/messages"
+                        ) Back to Messages
 
-            p Your first message will be sent as a message request.
 
-            form(
-                method="POST"
-                action=`/messages/${partner.user_id}`
-            )
+                if !requestStatus
 
-                label(for="message") First Message
+                    section.private-chat-request
 
-                textarea(
-                    id="message"
-                    name="message"
-                    placeholder="Write a respectful introduction..."
-                    required
-                )
+                        .private-chat-request-content
 
-                button(type="submit")
-                    | Send Message Request
+                            .private-chat-state-icon
+                                | 👋
 
-        br
+                            h2 Start a conversation
 
-        a(href="/messages")
-            | ← Back to Messages
+                            p
+                                | You are not currently matched with
+                                | #{partner.first_name}. Your first message
+                                | will be sent as a message request.
+
+                            form.private-message-request-form(
+                                method="POST"
+                                action=`/messages/${partner.user_id}`
+                            )
+
+                                label(
+                                    for="message"
+                                ) First Message
+
+                                textarea(
+                                    id="message"
+                                    name="message"
+                                    placeholder=`Introduce yourself to ${partner.first_name}...`
+                                    required
+                                )
+
+                                button.primary-button(
+                                    type="submit"
+                                ) Send Message Request

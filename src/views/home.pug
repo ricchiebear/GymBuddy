@@ -1,14 +1,540 @@
-extends layout 
+extends layout
 
-block content 
-    h1 Welcome to GymBuddy!
+block content
 
-    p Your ultimate fitness companion. Connect with workout partners, track your progress, and achieve your fitness goals together.
+    if isLoggedIn
 
-    a(href="/register") Create an Account
-    |  br 
-    a(href="/login") Login
-    |  br 
-    a(href="/workouts") Explore Workouts
-    |  br 
-    a(href="/help") Need Help?
+        //=====================================================
+        // LOGGED-IN USER DASHBOARD
+        //=====================================================
+
+        main.home-dashboard
+
+            //=================================================
+            // DASHBOARD WELCOME
+            //=================================================
+
+            section.dashboard-welcome
+
+                .dashboard-welcome-content
+
+                    p.dashboard-eyebrow
+                        | YOUR GYMBUDDY DASHBOARD
+
+                    h1 Ready to train?
+
+                    p
+                        | Manage your workouts, discover compatible
+                        | training partners and keep your fitness
+                        | journey moving forward.
+
+
+                .dashboard-welcome-actions
+
+                    a.primary-button(
+                        href="/workouts/create"
+                    ) + Create Workout
+
+                    a.secondary-button(
+                        href="/recommendations"
+                    ) Find My Matches
+
+
+            //=================================================
+            // DASHBOARD STATISTICS
+            //=================================================
+
+            if dashboard
+
+                section.dashboard-area
+
+                    .dashboard-section-heading
+
+                        div
+                            p.dashboard-eyebrow
+                                | YOUR PROGRESS
+
+                            h2 At a glance
+
+
+                    .stats-grid
+
+                        .stat-card
+                            span.stat-icon 🔥
+                            strong= dashboard.currentStreak
+                            p Current Streak
+
+
+                        .stat-card
+                            span.stat-icon 🏋️
+                            strong= dashboard.completedWorkouts
+                            p Completed Workouts
+
+
+                        .stat-card
+                            span.stat-icon 📅
+                            strong= dashboard.upcomingWorkouts
+                            p Upcoming Workouts
+
+
+                        .stat-card
+                            span.stat-icon 🤝
+                            strong= dashboard.workoutPartners
+                            p Workout Partners
+
+
+            //=================================================
+            // MAIN QUICK ACTIONS
+            //=================================================
+
+            section.dashboard-area
+
+                .dashboard-section-heading
+
+                    div
+                        p.dashboard-eyebrow
+                            | QUICK ACCESS
+
+                        h2 What would you like to do?
+
+                    a.dashboard-text-link(
+                        href="/profile"
+                    ) View Profile →
+
+
+                .dashboard-feature-grid
+
+                    a.dashboard-feature-card(
+                        href="/workouts"
+                    )
+                        span.dashboard-feature-icon 🏋️
+
+                        .dashboard-feature-content
+                            h3 Workouts
+
+                            p
+                                | Discover available workouts
+                                | and find your next training session.
+
+                            span.dashboard-card-link
+                                | Explore Workouts →
+
+
+                    a.dashboard-feature-card(
+                        href="/recommendations"
+                    )
+                        span.dashboard-feature-icon 🤝
+
+                        .dashboard-feature-content
+                            h3 Partner Matches
+
+                            p
+                                | Discover compatible workout partners
+                                | based on your GymBuddy activity.
+
+                            span.dashboard-card-link
+                                | Find Matches →
+
+
+                    a.dashboard-feature-card(
+                        href="/ai-coach"
+                    )
+                        span.dashboard-feature-icon 🤖
+
+                        .dashboard-feature-content
+                            h3 AI Coach
+
+                            p
+                                | Get personalised fitness guidance
+                                | using your GymBuddy progress and goals.
+
+                            span.dashboard-card-link
+                                | Ask AI Coach →
+
+
+                    a.dashboard-feature-card(
+                        href="/messages"
+                    )
+                        span.dashboard-feature-icon 💬
+
+                        .dashboard-feature-content
+                            h3 Messages
+
+                            p
+                                | Stay connected with workout partners
+                                | and manage your conversations.
+
+                            span.dashboard-card-link
+                                | Open Messages →
+
+
+            //=================================================
+            // WORKOUT MANAGEMENT
+            //=================================================
+
+            section.dashboard-area
+
+                .dashboard-section-heading
+
+                    div
+                        p.dashboard-eyebrow
+                            | YOUR TRAINING
+
+                        h2 Manage your workouts
+
+
+                .dashboard-action-grid
+
+                    a.dashboard-action-card(
+                        href="/my-workouts"
+                    )
+                        span.dashboard-action-icon 📋
+
+                        div
+                            h3 My Workouts
+                            p Manage workouts you have created.
+
+
+                    a.dashboard-action-card(
+                        href="/joined-workouts"
+                    )
+                        span.dashboard-action-icon 🤝
+
+                        div
+                            h3 Joined Workouts
+                            p See sessions you have joined.
+
+
+                    a.dashboard-action-card(
+                        href="/workout-requests"
+                    )
+                        span.dashboard-action-icon 📩
+
+                        div
+                            h3 Workout Requests
+                            p Review requests for your workouts.
+
+
+                    a.dashboard-action-card(
+                        href="/notifications"
+                    )
+                        span.dashboard-action-icon 🔔
+
+                        div
+                            h3 Notifications
+                            p Check your latest GymBuddy updates.
+
+
+            //=================================================
+            // AI COACH SPOTLIGHT
+            //=================================================
+
+            section.dashboard-ai-section
+
+                .dashboard-ai-icon 🤖
+
+                .dashboard-ai-content
+
+                    p.dashboard-eyebrow
+                        | PERSONALISED AI COACHING
+
+                    h2
+                        | Your training journey,
+                        br
+                        | understood by AI.
+
+                    p
+                        | Ask about your fitness goals, workout history,
+                        | streaks, upcoming sessions and recommended
+                        | workout partners.
+
+                    .dashboard-ai-actions
+
+                        a.primary-button(
+                            href="/ai-coach"
+                        ) Talk to AI Coach
+
+                        a.secondary-button(
+                            href="/recommendations"
+                        ) View Recommendations
+
+
+            //=================================================
+            // SUPPORT
+            //=================================================
+
+            section.dashboard-support
+
+                div
+                    h2 Need some help?
+
+                    p
+                        | Visit the GymBuddy Help Centre or contact
+                        | support if something isn't working.
+
+
+                .dashboard-support-actions
+
+                    a.secondary-button(
+                        href="/help"
+                    ) Help Centre
+
+                    a.secondary-button(
+                        href="/support"
+                    ) Contact Support
+
+
+    else
+
+        //=====================================================
+        // PUBLIC / LOGGED-OUT LANDING PAGE
+        //=====================================================
+
+        main.landing-page
+
+            //=================================================
+            // HERO SECTION
+            //=================================================
+
+            section.hero-section
+
+                .hero-content
+
+                    p.hero-eyebrow
+                        | TRAIN TOGETHER. PROGRESS TOGETHER.
+
+                    h1.hero-title
+                        | FIND YOUR
+                        br
+                        span PERFECT
+                        br
+                        | WORKOUT BUDDY
+
+                    p.hero-description
+                        | GymBuddy helps you connect with compatible workout partners,
+                        | organise training sessions, build consistency and get
+                        | personalised support from your AI Coach.
+
+                    .hero-actions
+
+                        a.primary-button(
+                            href="/register"
+                        ) Get Started
+
+                        a.secondary-button(
+                            href="/login"
+                        ) Login
+
+
+                .hero-visual
+
+                    .hero-visual-card
+
+                        span.hero-visual-icon 🤝
+
+                        h2 Find Better Training Partners
+
+                        p
+                            | Match with GymBuddy users who share similar
+                            | goals, workout habits and fitness interests.
+
+
+            //=================================================
+            // HOW GYMBUDDY WORKS
+            //=================================================
+
+            section.steps-section
+
+                .section-heading
+
+                    p.section-eyebrow
+                        | START YOUR JOURNEY
+
+                    h2
+                        | JOIN GYMBUDDY
+                        br
+                        | IN 4 STEPS
+
+
+                .steps-grid
+
+                    article.step-card
+                        span.step-number 01
+                        h3 Create Your Account
+
+                        p
+                            | Register and create your GymBuddy profile
+                            | with your fitness goal and basic information.
+
+
+                    article.step-card
+                        span.step-number 02
+                        h3 Build Your Fitness Profile
+
+                        p
+                            | Add your goals, workout interests and progress
+                            | so GymBuddy can understand what suits you.
+
+
+                    article.step-card
+                        span.step-number 03
+                        h3 Find Your Gym Buddy
+
+                        p
+                            | Use smart recommendations to discover people
+                            | who match your training goals and activity.
+
+
+                    article.step-card
+                        span.step-number 04
+                        h3 Train & Progress
+
+                        p
+                            | Create or join workouts, complete sessions,
+                            | build streaks and keep improving together.
+
+
+            //=================================================
+            // FEATURES
+            //=================================================
+
+            section.features-section
+
+                .section-heading
+
+                    p.section-eyebrow
+                        | BUILT FOR YOUR FITNESS JOURNEY
+
+                    h2 Everything You Need In One Place
+
+
+                .features-grid
+
+                    article.feature-card
+
+                        span.feature-icon 🤝
+
+                        h3 Smart Partner Matching
+
+                        p
+                            | Discover compatible workout partners using
+                            | fitness goals, workout history, streaks and
+                            | shared workout interests.
+
+
+                    article.feature-card
+
+                        span.feature-icon 🤖
+
+                        h3 Personal AI Coach
+
+                        p
+                            | Ask fitness questions and get personalised
+                            | guidance based on your GymBuddy activity,
+                            | workouts and goals.
+
+
+                    article.feature-card
+
+                        span.feature-icon 🏋️
+
+                        h3 Workout Management
+
+                        p
+                            | Create workouts, join sessions, manage
+                            | participants and keep track of upcoming
+                            | training plans.
+
+                        a(
+                            href="/workouts"
+                        ) Explore Workouts →
+
+
+                    article.feature-card
+
+                        span.feature-icon 🔥
+
+                        h3 Progress & Streaks
+
+                        p
+                            | Record completed workouts, maintain your
+                            | training streak and stay consistent over time.
+
+
+            //=================================================
+            // COMMUNITY SECTION
+            //=================================================
+
+            section.community-section
+
+                .community-content
+
+                    p.section-eyebrow
+                        | MORE THAN JUST A WORKOUT APP
+
+                    h2
+                        | CONNECT.
+                        br
+                        | TRAIN.
+                        br
+                        | STAY CONSISTENT.
+
+                    p
+                        | GymBuddy combines community, workout management,
+                        | progress tracking and intelligent coaching to help
+                        | make training more social and consistent.
+
+
+                .community-statements
+
+                    .community-statement
+                        span 01
+
+                        p
+                            | Find people who actually match your
+                            | fitness journey.
+
+
+                    .community-statement
+                        span 02
+
+                        p
+                            | Plan workouts and stay connected with
+                            | your training partners.
+
+
+                    .community-statement
+                        span 03
+
+                        p
+                            | Use AI-powered coaching to understand
+                            | and improve your progress.
+
+
+            //=================================================
+            // FINAL CTA
+            //=================================================
+
+            section.landing-cta
+
+                p.section-eyebrow
+                    | READY TO START?
+
+                h2
+                    | FIND YOUR
+                    br
+                    | GYM BUDDY.
+
+                p
+                    | Build better habits, meet compatible workout partners
+                    | and make every training session count.
+
+                .hero-actions
+
+                    a.primary-button(
+                        href="/register"
+                    ) Create Account
+
+                    a.secondary-button(
+                        href="/login"
+                    ) Login

@@ -1,15 +1,125 @@
 extends layout
 
-block content 
-    h1 Login 
+block content
 
-    form(method="POST" action="/login")
-        div 
-            label(for="email") Email:
-            input(type="email" name="email" id="email" placeholder="example@buddy.co.uk" required)
+    main.auth-page
 
-        div
-            label(for="password") Password:
-            input(type="password" name="password" id="password" required)
+        .auth-shell
 
-        button(type="submit") Login
+            //=====================================================
+            // LEFT SIDE - INTRO
+            //=====================================================
+
+            section.auth-intro
+
+                .auth-intro-content
+
+                    span.auth-intro-icon 🏋️
+
+                    p.auth-eyebrow
+                        | WELCOME BACK
+
+                    h1
+                        | Ready to get
+                        br
+                        | back to training?
+
+                    p
+                        | Log in to access your workouts,
+                        | partner recommendations, messages,
+                        | progress and GymBuddy AI Coach.
+
+                    .auth-intro-points
+
+                        .auth-intro-point
+                            span 🤝
+                            p Find compatible workout partners
+
+                        .auth-intro-point
+                            span 🔥
+                            p Keep track of your progress and streaks
+
+                        .auth-intro-point
+                            span 🤖
+                            p Get personalised support from your AI Coach
+
+
+            //=====================================================
+            // RIGHT SIDE - LOGIN FORM
+            //=====================================================
+
+            section.auth-form-panel
+
+                .auth-form-container
+
+                    .auth-form-header
+
+                        p.auth-eyebrow
+                            | ACCOUNT LOGIN
+
+                        h2 Welcome back
+
+                        p
+                            | Enter your GymBuddy details to continue.
+
+
+                    form.auth-form(
+                        method="POST"
+                        action="/login"
+                    )
+
+                        .auth-field
+
+                            label(
+                                for="email"
+                            ) Email
+
+                            input(
+                                type="email"
+                                name="email"
+                                id="email"
+                                placeholder="example@buddy.co.uk"
+                                autocomplete="email"
+                                required
+                            )
+
+
+                        .auth-field
+
+                            label(
+                                for="password"
+                            ) Password
+
+                            input(
+                                type="password"
+                                name="password"
+                                id="password"
+                                placeholder="Enter your password"
+                                autocomplete="current-password"
+                                required
+                            )
+
+
+                        button.auth-submit-button(
+                            type="submit"
+                        )
+                            | Login
+
+
+                    .auth-divider
+                        span
+                            | New to GymBuddy?
+
+
+                    a.auth-secondary-button(
+                        href="/register"
+                    )
+                        | Create an Account
+
+
+                    p.auth-help-text
+                        | Need help accessing your account?
+                        |
+                        a(
+                            href="/help"
+                        ) Visit Help

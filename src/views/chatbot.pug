@@ -1,119 +1,294 @@
 extends layout
 
 block content
+
     main.ai-coach-page
-        h1 🤖 GymBuddy AI Coach
-
-        p
-            | Ask GymBuddy questions about workouts,
-            | fitness and your training journey.
 
         //=====================================================
-        // NEW CHAT
+        // AI COACH HEADER
         //=====================================================
 
-        form(
-            method="POST"
-            action="/ai-coach/new"
-        )
-            button(
-                type="submit"
-            ) + New Chat
+        section.ai-coach-header
 
-        hr
+            .ai-coach-header-content
 
-        //=====================================================
-        // CHAT HISTORY
-        //=====================================================
+                .ai-coach-title-row
 
-        section.ai-chat-history
-            h2 Chat History
+                    .ai-coach-main-icon
+                        | 🤖
 
-            if conversations && conversations.length > 0
-                ul
-                    each conversation in conversations
-                        li
-                            if Number(conversation.conversation_id) === Number(activeConversationId)
-                                strong
-                                    a(
-                                        href=`/ai-coach/conversations/${conversation.conversation_id}`
-                                    )= conversation.title || "Untitled Conversation"
-                            else
-                                a(
-                                    href=`/ai-coach/conversations/${conversation.conversation_id}`
-                                )= conversation.title || "Untitled Conversation"
-            else
-                p No previous conversations yet.
-
-        hr
-
-        //=====================================================
-        // ACTIVE CONVERSATION
-        //=====================================================
-
-        section.ai-active-conversation
-            if activeConversation
-                h2= activeConversation.title || "Conversation"
-            else
-                h2 New Conversation
-
-            .chat-container
-                if messages && messages.length > 0
-                    each item in messages
-                        if item.role === "user" || item.sender === "user"
-                            article.chat-message.user-message
-                                strong You
-                                p= item.message
-
-                                if item.created_at
-                                    small= new Date(item.created_at).toLocaleString("en-GB")
-
-                        else if item.role === "assistant" || item.sender === "assistant"
-                            article.chat-message.ai-message
-                                strong GymBuddy AI Coach
-                                p= item.message
-
-                                if item.created_at
-                                    small= new Date(item.created_at).toLocaleString("en-GB")
-
-                else
-                    .chat-empty-state
-                        p
-                            | Start a conversation with your AI Coach.
+                    .ai-coach-title-text
+                        h1 GymBuddy AI Coach
 
                         p
-                            | You can ask about fitness,
-                            | workouts, your GymBuddy progress
-                            | and other training questions.
+                            | Your personalised fitness assistant
 
-        //=====================================================
-        // MESSAGE FORM
-        //=====================================================
-
-        section.ai-message-form
             form(
                 method="POST"
-                action="/ai-coach"
+                action="/ai-coach/new"
             )
+                button.ai-new-chat-button(
+                    type="submit"
+                )
+                    span +
+                    | New Chat
 
-                if activeConversationId
-                    input(
-                        type="hidden"
-                        name="conversation_id"
-                        value=activeConversationId
+
+        //=====================================================
+        // AI COACH CHAT LAYOUT
+        //=====================================================
+
+        section.ai-chat-layout
+
+
+            //=================================================
+            // LEFT SIDE - CHAT HISTORY
+            //=================================================
+
+            aside.ai-chat-sidebar
+
+                .ai-sidebar-heading
+
+                    h2 Conversations
+
+                    p
+                        | Your previous AI Coach chats
+
+
+                .ai-conversation-list
+
+                    if conversations && conversations.length > 0
+
+                        each conversation in conversations
+
+                            if Number(conversation.conversation_id) === Number(activeConversationId)
+
+                                a.ai-conversation-item.ai-conversation-active(
+                                    href=`/ai-coach/conversations/${conversation.conversation_id}`
+                                )
+
+                                    span.ai-conversation-icon
+                                        | 💬
+
+                                    .ai-conversation-details
+
+                                        strong
+                                            = conversation.title || "Untitled Conversation"
+
+                                        span
+                                            | Active conversation
+
+                            else
+
+                                a.ai-conversation-item(
+                                    href=`/ai-coach/conversations/${conversation.conversation_id}`
+                                )
+
+                                    span.ai-conversation-icon
+                                        | 💬
+
+                                    .ai-conversation-details
+
+                                        strong
+                                            = conversation.title || "Untitled Conversation"
+
+                                        span
+                                            | View conversation
+
+                    else
+
+                        .ai-no-conversations
+
+                            span
+                                | 💬
+
+                            p
+                                | No previous conversations yet.
+
+                            small
+                                | Start chatting with your AI Coach.
+
+
+            //=================================================
+            // RIGHT SIDE - ACTIVE CHAT
+            //=================================================
+
+            section.ai-chat-main
+
+
+                //=============================================
+                // ACTIVE CHAT HEADER
+                //=============================================
+
+                .ai-active-chat-header
+
+                    .ai-active-chat-user
+
+                        .ai-chat-avatar
+                            | 🤖
+
+                        .ai-active-chat-info
+
+                            if activeConversation
+
+                                h2
+                                    = activeConversation.title || "GymBuddy AI Coach"
+
+                            else
+
+                                h2 GymBuddy AI Coach
+
+                            p.ai-online-status
+                                span.ai-online-dot
+                                | AI Fitness Assistant
+
+
+                //=============================================
+                // MESSAGE AREA
+                //=============================================
+
+                .ai-messages-container
+
+                    if messages && messages.length > 0
+
+                        each item in messages
+
+                            if item.role === "user" || item.sender === "user"
+
+                                .ai-message-row.ai-message-row-user
+
+                                    .ai-message-bubble.ai-user-bubble
+
+                                        p
+                                            = item.message
+
+                                        if item.created_at
+
+                                            small.ai-message-time
+                                                = new Date(item.created_at).toLocaleString("en-GB")
+
+
+                            if item.role === "assistant" || item.sender === "assistant"
+
+                                .ai-message-row.ai-message-row-assistant
+
+                                    .ai-message-avatar
+                                        | 🤖
+
+                                    .ai-message-bubble.ai-assistant-bubble
+
+                                        strong.ai-message-sender
+                                            | GymBuddy AI Coach
+
+                                        p
+                                            = item.message
+
+                                        if item.created_at
+
+                                            small.ai-message-time
+                                                = new Date(item.created_at).toLocaleString("en-GB")
+
+
+                    else
+
+                        .ai-chat-welcome
+
+                            .ai-chat-welcome-icon
+                                | 🤖
+
+                            h2
+                                | How can I help with your fitness today?
+
+                            p
+                                | Ask me about your workouts, progress,
+                                | training goals or GymBuddy recommendations.
+
+
+                            .ai-suggestion-grid
+
+                                .ai-suggestion-card
+
+                                    span
+                                        | 🏋️
+
+                                    strong
+                                        | Workout Advice
+
+                                    p
+                                        | Ask questions about exercises and training.
+
+
+                                .ai-suggestion-card
+
+                                    span
+                                        | 🔥
+
+                                    strong
+                                        | My Progress
+
+                                    p
+                                        | Ask about your workout streak and activity.
+
+
+                                .ai-suggestion-card
+
+                                    span
+                                        | 🤝
+
+                                    strong
+                                        | Partner Matches
+
+                                    p
+                                        | Ask about your recommended workout partners.
+
+
+                                .ai-suggestion-card
+
+                                    span
+                                        | 💪
+
+                                    strong
+                                        | Fitness Guidance
+
+                                    p
+                                        | Get personalised support for your goals.
+
+
+                //=============================================
+                // MESSAGE INPUT
+                //=============================================
+
+                .ai-chat-input-area
+
+                    form.ai-chat-form(
+                        method="POST"
+                        action="/ai-coach"
                     )
 
-                label(
-                    for="message"
-                ) Message
+                        if activeConversationId
 
-                textarea(
-                    id="message"
-                    name="message"
-                    placeholder="Ask your AI Coach something..."
-                    required
-                )
+                            input(
+                                type="hidden"
+                                name="conversation_id"
+                                value=activeConversationId
+                            )
 
-                button(
-                    type="submit"
-                ) Send
+
+                        .ai-input-wrapper
+
+                            textarea.ai-chat-input(
+                                id="message"
+                                name="message"
+                                placeholder="Message your GymBuddy AI Coach..."
+                                rows="1"
+                                required
+                            )
+
+                            button.ai-send-button(
+                                type="submit"
+                                aria-label="Send message"
+                            )
+                            
+
+                    p.ai-chat-disclaimer
+                        | GymBuddy AI Coach can make mistakes. Always use proper form and seek professional advice when necessary.

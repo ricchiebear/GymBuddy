@@ -21,68 +21,124 @@ html
         // MAIN NAVIGATION
         //=====================================================
 
-        nav.main-navigation
+        header.site-header
 
-            // Home is available to everyone
-            a(
-                href="/"
-            ) 🏠 Home
+            nav.main-navigation
 
+                //=================================================
+                // BRAND
+                //=================================================
 
-
-            if isLoggedIn
-
-
-                a(
-                    href="/workouts"
-                ) 🏋️ Workouts
+                a.brand(
+                    href="/"
+                )
+                    span.brand-icon 🏋️
+                    span.brand-name GymBuddy
 
 
-                a(
-                    href="/recommendations"
-                ) 🤝 Recommendations
+                //=================================================
+                // NAVIGATION LINKS
+                //=================================================
+
+                .navigation-links
+
+                    a.nav-link(
+                        href="/"
+                    )
+                        span.nav-icon 🏠
+                        span Home
 
 
-                a(
-                |   href="/ai-coach"
-                ) 🤖 AI Coach    
+                    if isLoggedIn
+
+                        a.nav-link(
+                            href="/workouts"
+                        )
+                            span.nav-icon 🏋️
+                            span Workouts
 
 
-                a(
-                    href="/messages"
-                ) 💬 Messages
+                        a.nav-link(
+                            href="/recommendations"
+                        )
+                            span.nav-icon 🤝
+                            span Recommendations
 
 
-                a(
-                    href="/notifications"
-                ) 🔔 Notifications
+                        a.nav-link(
+                            href="/ai-coach"
+                        )
+                            span.nav-icon 🤖
+                            span AI Coach
 
 
-                a(
-                    href="/profile"
-                ) 👤 My Profile
+                        a.nav-link(
+                            href="/messages"
+                        )
+                            span.nav-icon 💬
+                            span Messages
 
 
-                a(
-                    href="/logout"
-                ) Logout
+                        a.nav-link(
+                            href="/notifications"
+                        )
+                            span.nav-icon 🔔
+                            span Notifications
 
 
-            else
+                //=================================================
+                // ACCOUNT AREA
+                //=================================================
+
+                .navigation-account
+
+                    if isLoggedIn
+
+                        a.profile-nav-link(
+                            href="/profile"
+                        )
+                            span.profile-nav-icon 👤
+                            span My Profile
 
 
-                a(
-                    href="/register"
-                ) Register
+                        a.logout-button(
+                            href="/logout"
+                        ) Logout
 
-    
-                a(
-                    href="/login"
-                ) Login
+
+                    else
+
+                        a.register-nav-link(
+                            href="/register"
+                        ) Register
+
+
+                        a.login-nav-link(
+                            href="/login"
+                        ) Login
+
 
         //=====================================================
         // PAGE CONTENT
         //=====================================================
 
-        main
+        main.site-main
             block content
+
+
+        //=====================================================
+        // FOOTER
+        //=====================================================
+
+        footer.site-footer
+
+            .footer-content
+
+                p
+                    | © 2026 GymBuddy
+
+                .footer-links
+
+                    a(
+                        href="/support"
+                    ) Help & Support

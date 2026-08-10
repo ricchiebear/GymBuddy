@@ -1,31 +1,248 @@
-extends layout 
+extends layout
 
-block content 
-    h1 Edit profile 
+block content
 
-    form(method="POST" action="/profile/edit" enctype="multipart/form-data")
-        div 
-            label(for="first_name") First Name:
-            input(type="text" name="first_name" id="first_name" value=user.first_name required)
+    main.account-settings-page
 
-        div
-            label(for="last_name") Last Name:
-            input(type="text" name="last_name" id="last_name" value=user.last_name required)
+        //=====================================================
+        // PAGE HEADER
+        //=====================================================
 
-        div
-            label(for="email") Email:
-            input(type="email" name="email" id="email" value=user.email required)
+        .account-settings-header
 
-        div
-            label(for="fitness_goals") Fitness Goals:
-            textarea(name="fitness_goals" id="fitness_goals" value=user.fitness_goals placeholder="e.g. Build muscles, Lose weight, Improve stamina")
+            div
+                p.settings-eyebrow
+                    | PROFILE SETTINGS
 
-        div
-            label(for="profile_bio") Bio:
-            textarea(name="profile_bio" id="profile_bio")= user.profile_bio
+                h1 Edit Profile
 
-        div 
-            label(for="Profile Picture") Profile Picture 
-            input(type="file" name="profile_picture" accept="image/*")
+                p
+                    | Update your personal information and
+                    | fitness profile.
 
-        button(type="submit") Save Changes
+            a.settings-back-link(
+                href="/profile"
+            )
+                | ← Back to Profile
+
+
+        //=====================================================
+        // SETTINGS CARD
+        //=====================================================
+
+        section.settings-card
+
+            form(
+                method="POST"
+                action="/profile/edit"
+                enctype="multipart/form-data"
+            )
+
+                //=================================================
+                // PROFILE PHOTO
+                //=================================================
+
+                .settings-profile-photo
+
+                    .settings-avatar
+
+                        if user.profile_picture
+
+                            img(
+                                src=user.profile_picture
+                                alt=`${user.first_name} ${user.last_name}`
+                            )
+
+                        else
+
+                            span
+                                | 👤
+
+
+                    .settings-photo-info
+
+                        h2
+                            | #{user.first_name} #{user.last_name}
+
+                        p
+                            | JPG, PNG or other image formats.
+                            | Maximum file size 5MB.
+
+                        label.settings-upload-button(
+                            for="profile_picture"
+                        )
+                            | Change Profile Photo
+
+                        input.settings-file-input(
+                            type="file"
+                            id="profile_picture"
+                            name="profile_picture"
+                            accept="image/*"
+                        )
+
+
+                //=================================================
+                // PERSONAL INFORMATION
+                //=================================================
+
+                .settings-divider
+
+
+                .settings-section
+
+                    .settings-section-heading
+
+                        h2 Personal Information
+
+                        p
+                            | Manage the basic details attached
+                            | to your GymBuddy profile.
+
+
+                    .settings-form-grid
+
+                        .settings-field
+
+                            label(
+                                for="first_name"
+                            )
+                                | First Name
+
+                            input(
+                                type="text"
+                                id="first_name"
+                                name="first_name"
+                                value=user.first_name
+                                required
+                            )
+
+
+                        .settings-field
+
+                            label(
+                                for="last_name"
+                            )
+                                | Last Name
+
+                            input(
+                                type="text"
+                                id="last_name"
+                                name="last_name"
+                                value=user.last_name
+                                required
+                            )
+
+
+                    .settings-field
+
+                        label(
+                            for="email"
+                        )
+                            | Email Address
+
+                        input(
+                            type="email"
+                            id="email"
+                            name="email"
+                            value=user.email
+                            readonly
+                        )
+
+                        small
+                            | Your GymBuddy email cannot currently be changed.
+
+
+                //=================================================
+                // FITNESS PROFILE
+                //=================================================
+
+                .settings-divider
+
+
+                .settings-section
+
+                    .settings-section-heading
+
+                        h2 Fitness Profile
+
+                        p
+                            | Keep these details accurate so GymBuddy
+                            | can improve your recommendations.
+
+
+                    .settings-field
+
+                        label(
+                            for="fitness_goal"
+                        )
+                            | Fitness Goal
+
+                        select(
+                            id="fitness_goal"
+                            name="fitness_goal"
+                            required
+                        )
+
+                            option(
+                                value="lose_weight"
+                                selected=user.fitness_goal === "lose_weight"
+                            )
+                                | Lose Weight
+
+                            option(
+                                value="build_muscle"
+                                selected=user.fitness_goal === "build_muscle"
+                            )
+                                | Build Muscle
+
+                            option(
+                                value="improve_endurance"
+                                selected=user.fitness_goal === "improve_endurance"
+                            )
+                                | Improve Endurance
+
+                            option(
+                                value="general_fitness"
+                                selected=user.fitness_goal === "general_fitness"
+                            )
+                                | General Fitness
+
+
+                    .settings-field
+
+                        label(
+                            for="profile_bio"
+                        )
+                            | Profile Bio
+
+                        textarea(
+                            id="profile_bio"
+                            name="profile_bio"
+                            rows="5"
+                            maxlength="500"
+                            placeholder="Tell other GymBuddy users about yourself..."
+                        )= user.profile_bio || ""
+
+                        small
+                            | Share your training interests, experience
+                            | or what you're looking for in a workout partner.
+
+
+                //=================================================
+                // SAVE ACTIONS
+                //=================================================
+
+                .settings-divider
+
+
+                .settings-actions
+
+                    a.settings-cancel-button(
+                        href="/profile"
+                    )
+                        | Cancel
+
+                    button.settings-save-button(
+                        type="submit"
+                    )
+                        | Save Changes

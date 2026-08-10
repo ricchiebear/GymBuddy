@@ -1,40 +1,254 @@
 extends layout
 
 block content
-  h1 Create Your GymBuddy Account
 
-  form(method="POST" action="/register")
-    div
-      label(for="first_name") First Name:
-      input(type="text" name="first_name" id="first_name" required)
+    main.auth-page
 
-    div
-      label(for="last_name") Last Name:
-      input(type="text" name="last_name" id="last_name" required)
+        .auth-shell.auth-register-shell
 
-    div
-      label(for="email") Email:
-      input(type="email" name="email" id="email" placeholder="example@buddy.co.uk" required)
+            //=====================================================
+            // LEFT SIDE - INTRO
+            //=====================================================
 
-    div
-      label(for="password") Password:
-      input(type="password" name="password" id="password" required)
+            section.auth-intro
 
-    div
-      label(for="confirm_password") Confirm Password:
-      input(type="password" name="confirm_password" id="confirm_password" required)
+                .auth-intro-content
 
-    div
-      label(for="fitness_goal") Fitness Goal:
-      select(name="fitness_goal" id="fitness_goal" required)
-        option(value="" disabled selected) Select your fitness goal
-        option(value="lose_weight") Lose Weight
-        option(value="build_muscle") Build Muscle
-        option(value="improve_endurance") Improve Endurance
-        option(value="general_fitness") General Fitness
+                    span.auth-intro-icon 🤝
 
-    div
-      label(for="profile_bio") Profile Bio:
-      textarea(name="profile_bio" id="profile_bio" rows="4" placeholder="Tell us about yourself...")
+                    p.auth-eyebrow
+                        | JOIN GYMBUDDY
 
-    button(type="submit") Register
+                    h1
+                        | Start your
+                        br
+                        | fitness journey.
+
+                    p
+                        | Create your account, set your fitness goal
+                        | and begin connecting with compatible
+                        | workout partners.
+
+                    .auth-intro-points
+
+                        .auth-intro-point
+                            span 🏋️
+                            p Create and join workouts
+
+                        .auth-intro-point
+                            span 🤝
+                            p Get smart workout partner recommendations
+
+                        .auth-intro-point
+                            span 🤖
+                            p Access personalised AI coaching
+
+
+            //=====================================================
+            // RIGHT SIDE - REGISTRATION FORM
+            //=====================================================
+
+            section.auth-form-panel.auth-register-panel
+
+                .auth-form-container.auth-register-container
+
+                    .auth-form-header
+
+                        p.auth-eyebrow
+                            | CREATE ACCOUNT
+
+                        h2 Join GymBuddy
+
+                        p
+                            | Enter your details to create your account.
+
+
+                    form.auth-form(
+                        method="POST"
+                        action="/register"
+                    )
+
+                        //=================================================
+                        // NAME ROW
+                        //=================================================
+
+                        .auth-form-row
+
+                            .auth-field
+
+                                label(
+                                    for="first_name"
+                                ) First Name
+
+                                input(
+                                    type="text"
+                                    name="first_name"
+                                    id="first_name"
+                                    placeholder="Richard"
+                                    autocomplete="given-name"
+                                    required
+                                )
+
+
+                            .auth-field
+
+                                label(
+                                    for="last_name"
+                                ) Last Name
+
+                                input(
+                                    type="text"
+                                    name="last_name"
+                                    id="last_name"
+                                    placeholder="Akole"
+                                    autocomplete="family-name"
+                                    required
+                                )
+
+
+                        //=================================================
+                        // EMAIL
+                        //=================================================
+
+                        .auth-field
+
+                            label(
+                                for="email"
+                            ) GymBuddy Email
+
+                            input(
+                                type="email"
+                                name="email"
+                                id="email"
+                                placeholder="example@buddy.co.uk"
+                                autocomplete="email"
+                                required
+                            )
+
+                            small.auth-field-help
+                                | Your email must end with @buddy.co.uk
+
+
+                        //=================================================
+                        // PASSWORD ROW
+                        //=================================================
+
+                        .auth-form-row
+
+                            .auth-field
+
+                                label(
+                                    for="password"
+                                ) Password
+
+                                input(
+                                    type="password"
+                                    name="password"
+                                    id="password"
+                                    placeholder="Create password"
+                                    autocomplete="new-password"
+                                    required
+                                )
+
+
+                            .auth-field
+
+                                label(
+                                    for="confirm_password"
+                                ) Confirm Password
+
+                                input(
+                                    type="password"
+                                    name="confirm_password"
+                                    id="confirm_password"
+                                    placeholder="Repeat password"
+                                    autocomplete="new-password"
+                                    required
+                                )
+
+
+                        small.auth-field-help
+                            | Use at least 8 characters with an uppercase letter,
+                            | lowercase letter and number.
+
+
+                        //=================================================
+                        // FITNESS GOAL
+                        //=================================================
+
+                        .auth-field
+
+                            label(
+                                for="fitness_goal"
+                            ) Fitness Goal
+
+                            select(
+                                name="fitness_goal"
+                                id="fitness_goal"
+                                required
+                            )
+
+                                option(
+                                    value=""
+                                    disabled
+                                    selected
+                                ) Select your fitness goal
+
+                                option(
+                                    value="lose_weight"
+                                ) Lose Weight
+
+                                option(
+                                    value="build_muscle"
+                                ) Build Muscle
+
+                                option(
+                                    value="improve_endurance"
+                                ) Improve Endurance
+
+                                option(
+                                    value="general_fitness"
+                                ) General Fitness
+
+
+                        //=================================================
+                        // PROFILE BIO
+                        //=================================================
+
+                        .auth-field
+
+                            label(
+                                for="profile_bio"
+                            ) Profile Bio
+
+                            textarea(
+                                name="profile_bio"
+                                id="profile_bio"
+                                rows="4"
+                                placeholder="Tell other GymBuddy users a little about yourself..."
+                            )
+
+
+                        button.auth-submit-button(
+                            type="submit"
+                        )
+                            | Create Account
+
+
+                    .auth-divider
+                        span
+                            | Already have an account?
+
+
+                    a.auth-secondary-button(
+                        href="/login"
+                    )
+                        | Login
+
+
+                    p.auth-help-text
+                        | Need help?
+                        |
+                        a(
+                            href="/help"
+                        ) Visit Help
