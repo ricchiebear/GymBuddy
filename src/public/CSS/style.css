@@ -6316,3 +6316,383 @@ label {
         width: 100%;
     }
 }
+
+/* =====================================================
+   ACCOUNT SETTINGS / EDIT PROFILE
+===================================================== */
+
+.account-settings-page {
+    width: 100%;
+    max-width: 900px;
+
+    margin: 0 auto;
+
+    padding: 45px 20px 80px;
+}
+
+
+/* =====================================================
+   SETTINGS HEADER
+===================================================== */
+
+.account-settings-header {
+    display: flex;
+
+    align-items: flex-end;
+    justify-content: space-between;
+
+    gap: 25px;
+
+    margin-bottom: 24px;
+}
+
+.settings-eyebrow {
+    margin-bottom: 5px;
+
+    color: var(--color-primary);
+
+    font-size: 12px;
+    font-weight: 800;
+
+    letter-spacing: 0.1em;
+
+    text-transform: uppercase;
+}
+
+.account-settings-header h1 {
+    margin-bottom: 6px;
+
+    font-size: 34px;
+}
+
+.account-settings-header p {
+    margin: 0;
+}
+
+.settings-back-link {
+    flex-shrink: 0;
+
+    color: var(--color-primary);
+
+    text-decoration: none;
+
+    font-size: 13px;
+    font-weight: 700;
+}
+
+
+/* =====================================================
+   SETTINGS CARD
+===================================================== */
+
+.settings-card {
+    overflow: hidden;
+
+    border: 1px solid var(--color-border);
+
+    border-radius: 18px;
+
+    background: var(--color-surface);
+
+    box-shadow: var(--shadow-medium);
+}
+
+
+/* =====================================================
+   PROFILE PHOTO
+===================================================== */
+
+.settings-profile-photo {
+    display: flex;
+
+    align-items: center;
+
+    gap: 20px;
+
+    padding: 28px;
+}
+
+.settings-avatar {
+    width: 84px;
+    height: 84px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    overflow: hidden;
+
+    border-radius: 50%;
+
+    background: var(--color-primary-light);
+
+    font-size: 34px;
+}
+
+.settings-avatar img {
+    width: 100%;
+    height: 100%;
+
+    object-fit: cover;
+}
+
+.settings-photo-info h2 {
+    margin: 0 0 4px;
+
+    font-size: 20px;
+}
+
+.settings-photo-info p {
+    margin: 0 0 12px;
+
+    font-size: 12px;
+}
+
+
+/* =====================================================
+   FILE UPLOAD
+===================================================== */
+
+.settings-upload-button {
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 8px 13px;
+
+    border: 1px solid var(--color-border);
+
+    border-radius: 8px;
+
+    background: var(--color-surface);
+
+    color: var(--color-text);
+
+    font-size: 12px;
+    font-weight: 700;
+
+    cursor: pointer;
+}
+
+.settings-upload-button:hover {
+    background: var(--color-surface-soft);
+}
+
+.settings-file-input {
+    display: none;
+}
+
+
+/* =====================================================
+   DIVIDER
+===================================================== */
+
+.settings-divider {
+    height: 1px;
+
+    background: var(--color-border);
+}
+
+
+/* =====================================================
+   SETTINGS SECTION
+===================================================== */
+
+.settings-section {
+    padding: 28px;
+}
+
+.settings-section-heading {
+    margin-bottom: 22px;
+}
+
+.settings-section-heading h2 {
+    margin-bottom: 5px;
+
+    font-size: 20px;
+}
+
+.settings-section-heading p {
+    margin: 0;
+
+    font-size: 13px;
+}
+
+
+/* =====================================================
+   SETTINGS FORM
+===================================================== */
+
+.settings-form-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap: 16px;
+}
+
+.settings-field {
+    margin-bottom: 18px;
+}
+
+.settings-field:last-child {
+    margin-bottom: 0;
+}
+
+.settings-field label {
+    margin-bottom: 7px;
+
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.settings-field input,
+.settings-field select,
+.settings-field textarea {
+    width: 100%;
+
+    border: 1px solid var(--color-border);
+
+    border-radius: 9px;
+
+    background: #f8fafc;
+
+    color: var(--color-text);
+}
+
+.settings-field input,
+.settings-field select {
+    min-height: 46px;
+}
+
+.settings-field textarea {
+    min-height: 120px;
+}
+
+.settings-field input:focus,
+.settings-field select:focus,
+.settings-field textarea:focus {
+    background: var(--color-surface);
+}
+
+.settings-field input[readonly] {
+    color: var(--color-text-secondary);
+
+    cursor: not-allowed;
+}
+
+.settings-field small {
+    display: block;
+
+    margin-top: 6px;
+
+    color: var(--color-text-secondary);
+
+    font-size: 11px;
+}
+
+
+/* =====================================================
+   SAVE ACTIONS
+===================================================== */
+
+.settings-actions {
+    display: flex;
+
+    align-items: center;
+    justify-content: flex-end;
+
+    gap: 10px;
+
+    padding: 20px 28px;
+
+    background: #f8fafc;
+}
+
+.settings-cancel-button,
+.settings-save-button {
+    min-height: 42px;
+
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 9px 17px;
+
+    border-radius: 8px;
+
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+
+    text-decoration: none;
+
+    cursor: pointer;
+}
+
+.settings-cancel-button {
+    border: 1px solid var(--color-border);
+
+    background: var(--color-surface);
+
+    color: var(--color-text);
+}
+
+.settings-save-button {
+    border: 0;
+
+    background: var(--color-primary);
+
+    color: #ffffff;
+}
+
+.settings-cancel-button:hover {
+    background: var(--color-surface-soft);
+}
+
+.settings-save-button:hover {
+    background: var(--color-primary-dark);
+}
+
+
+/* =====================================================
+   RESPONSIVE SETTINGS
+===================================================== */
+
+@media (max-width: 650px) {
+
+    .account-settings-page {
+        padding: 30px 14px 60px;
+    }
+
+    .account-settings-header {
+        align-items: flex-start;
+
+        flex-direction: column;
+    }
+
+    .settings-profile-photo {
+        align-items: flex-start;
+
+        flex-direction: column;
+    }
+
+    .settings-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-actions {
+        flex-direction: column-reverse;
+    }
+
+    .settings-actions a,
+    .settings-actions button {
+        width: 100%;
+    }
+}
