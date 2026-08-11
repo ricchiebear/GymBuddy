@@ -1,52 +1,251 @@
 extends layout
 
 block content
-    main.notifications-page
-        .notifications-header
-            div
-                h1 🔔 Notifications
+
+    main.notifications-hub
+
+        // =====================================================
+        // NOTIFICATIONS HERO
+        // =====================================================
+
+        section.notifications-hero
+
+            .notifications-hero-content
+
+                .notifications-hero-icon
+                    span 🔔
+
+                .notifications-hero-text
+
+                    p.notifications-eyebrow ACTIVITY CENTRE
+
+                    h1 Notifications
+
+                    if unreadCount === 0
+                        p
+                            | You're all caught up. New GymBuddy activity will appear here.
+
+                    else if unreadCount === 1
+                        p
+                            | You have 1 new notification waiting for you.
+
+                    else
+                        p
+                            | You have #{unreadCount} new notifications waiting for you.
+
+
+            .notifications-hero-actions
+
+                if unreadCount > 0
+
+                    form(
+                        method="POST"
+                        action="/notifications/read-all"
+                    )
+
+                        button.notifications-read-all(
+                            type="submit"
+                        )
+                            span ✓
+                            |  Mark All as Read
+
+
+        // =====================================================
+        // NOTIFICATION SUMMARY
+        // =====================================================
+
+        section.notifications-summary
+
+            // TOTAL NOTIFICATIONS
+
+            .notification-summary-card
+
+                .summary-icon
+                    span 🔔
+
+                .summary-content
+
+                    span.summary-number
+                        if notifications
+                            = notifications.length
+                        else
+                            | 0
+
+                    span.summary-label
+                        | Total Notifications
+
+
+            // UNREAD NOTIFICATIONS
+
+            .notification-summary-card
+
+                .summary-icon
+                    span 🔵
+
+                .summary-content
+
+                    span.summary-number
+                        if unreadCount
+                            = unreadCount
+                        else
+                            | 0
+
+                    span.summary-label
+                        | Unread
+
+
+            // READ NOTIFICATIONS
+
+            .notification-summary-card
+
+                .summary-icon
+                    span ✓
+
+                .summary-content
+
+                    span.summary-number
+                        if notifications
+                            - var readCount = notifications.filter(function(item) { return item.is_read; }).length
+                            = readCount
+                        else
+                            | 0
+
+                    span.summary-label
+                        | Read
+
+
+        // =====================================================
+        // SECTION HEADING
+        // =====================================================
+
+        section.notifications-section-header
+
+            .notifications-section-title
+
+                p.notifications-eyebrow
+                    | RECENT ACTIVITY
+
+                h2 Your Notifications
 
                 p
-                    | You have #{unreadCount} unread notification#{unreadCount === 1 ? "" : "s"}.
+                    | Stay updated with workout requests, messages and GymBuddy activity.
 
-            if unreadCount > 0
-                form(
-                    method="POST"
-                    action="/notifications/read-all"
-                )
-                    button(type="submit") Mark All as Read
+
+        // =====================================================
+        // NOTIFICATIONS
+        // =====================================================
 
         if notifications && notifications.length > 0
-            .notifications-list
+
+            section.notifications-feed
+
                 each notification in notifications
-                    article.notification-card(
-                        class=notification.is_read ? "notification-read" : "notification-unread"
-                    )
-                        .notification-content
-                            if notification.is_read
-                                span.notification-status ✓ Read
-                            else
-                                span.notification-status ● New
 
-                            p.notification-message= notification.message
+                    if notification.is_read
 
-                            small.notification-date= notification.displayTime
+                        article.notification-item.is-read
 
-                        .notification-actions
-                            if !notification.is_read
+                            .notification-item-icon
+                                span ✓
+
+                            .notification-item-content
+
+                                .notification-item-top
+
+                                    span.notification-badge.read
+                                        | Read
+
+                                    if notification.displayTime
+                                        span.notification-time
+                                            = notification.displayTime
+
+                                p.notification-item-message
+                                    = notification.message
+
+
+                            .notification-item-actions
+
                                 form(
                                     method="POST"
-                                    action=`/notifications/${notification.notification_id}/read`
+                                    action="/notifications/" + notification.notification_id + "/delete"
+                                    onsubmit="return confirm('Are you sure you want to delete this notification?')"
                                 )
-                                    button(type="submit") Mark as Read
 
-                            form(
-                                method="POST"
-                                action=`/notifications/${notification.notification_id}/delete`
-                                onsubmit="return confirm('Delete this notification?')"
-                            )
-                                button(type="submit") Delete
+                                    button.notification-action-button.delete-button(
+                                        type="submit"
+                                    )
+                                        | Delete
+
+
+                    else
+
+                        article.notification-item.is-unread
+
+                            .notification-item-icon
+                                span 🔔
+
+                            .notification-item-content
+
+                                .notification-item-top
+
+                                    span.notification-badge.new
+                                        | New
+
+                                    if notification.displayTime
+                                        span.notification-time
+                                            = notification.displayTime
+
+                                p.notification-item-message
+                                    = notification.message
+
+
+                            .notification-item-actions
+
+                                form(
+                                    method="POST"
+                                    action="/notifications/" + notification.notification_id + "/read"
+                                )
+
+                                    button.notification-action-button.read-button(
+                                        type="submit"
+                                    )
+                                        | ✓ Mark as Read
+
+
+                                form(
+                                    method="POST"
+                                    action="/notifications/" + notification.notification_id + "/delete"
+                                    onsubmit="return confirm('Are you sure you want to delete this notification?')"
+                                )
+
+                                    button.notification-action-button.delete-button(
+                                        type="submit"
+                                    )
+                                        | Delete
+
+
         else
-            .empty-state
-                h2 No notifications yet
-                p Your workout requests and updates will appear here.
+
+            section.notifications-empty-state
+
+                .notifications-empty-icon
+                    span 🔔
+
+                h2 You're all caught up
+
+                p
+                    | You don't have any notifications right now.
+                    | Workout requests, messages and other GymBuddy
+                    | activity will appear here.
+
+                .notifications-empty-actions
+
+                    a.notifications-primary-button(
+                        href="/workouts"
+                    )
+                        | Explore Workouts
+
+                    a.notifications-secondary-button(
+                        href="/recommendations"
+                    )
+                        | Find GymBuddies

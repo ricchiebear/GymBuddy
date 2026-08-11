@@ -17,7 +17,8 @@ block content
                     a.private-chat-back(
                         href="/messages"
                         aria-label="Back to messages"
-                    ) ←
+                    )
+                        | ←
 
                     .private-chat-partner-avatar
 
@@ -30,7 +31,8 @@ block content
 
                         else
 
-                            span 👤
+                            span
+                                | 👤
 
 
                     .private-chat-partner-info
@@ -44,7 +46,8 @@ block content
 
                                 span.private-chat-status-dot
 
-                                span GymBuddy conversation
+                                span
+                                    | GymBuddy conversation
 
                         if !canMessage
 
@@ -54,7 +57,8 @@ block content
 
                 a.private-chat-profile-link(
                     href=`/users/${partner.user_id}`
-                ) View Profile
+                )
+                    | View Profile
 
 
             //=====================================================
@@ -99,7 +103,8 @@ block content
 
                                         else
 
-                                            span 👤
+                                            span
+                                                | 👤
 
 
                                     .private-message-bubble.private-message-bubble-received
@@ -123,12 +128,17 @@ block content
                             .private-chat-empty-icon
                                 | 💬
 
-                            h2 Start the conversation
+                            h2
+                                | Start the conversation
 
                             p
                                 | Send a message to #{partner.first_name}
                                 | and start planning your next workout.
 
+
+                //=================================================
+                // MESSAGE COMPOSER
+                //=================================================
 
                 footer.private-chat-composer
 
@@ -142,13 +152,17 @@ block content
                             name="message"
                             placeholder=`Message ${partner.first_name}...`
                             rows="1"
+                            maxlength="1000"
                             required
                         )
 
                         button.private-chat-send-button(
                             type="submit"
                             aria-label="Send message"
+                            title="Send message"
                         )
+                            span
+                                | ➤
 
 
             //=====================================================
@@ -164,7 +178,8 @@ block content
                         .private-chat-state-icon
                             | ⏳
 
-                        h2 Message request pending
+                        h2
+                            | Message request pending
 
                         p
                             | Your request to message #{partner.first_name}
@@ -172,7 +187,8 @@ block content
 
                         a.secondary-button(
                             href="/messages"
-                        ) Back to Messages
+                        )
+                            | Back to Messages
 
 
                 if requestStatus && requestStatus.toLowerCase() === "rejected"
@@ -182,7 +198,8 @@ block content
                         .private-chat-state-icon
                             | ❌
 
-                        h2 Message request rejected
+                        h2
+                            | Message request rejected
 
                         p
                             | Your previous request to message
@@ -190,7 +207,8 @@ block content
 
                         a.secondary-button(
                             href="/messages"
-                        ) Back to Messages
+                        )
+                            | Back to Messages
 
 
                 if !requestStatus
@@ -202,7 +220,8 @@ block content
                             .private-chat-state-icon
                                 | 👋
 
-                            h2 Start a conversation
+                            h2
+                                | Start a conversation
 
                             p
                                 | You are not currently matched with
@@ -216,15 +235,18 @@ block content
 
                                 label(
                                     for="message"
-                                ) First Message
+                                )
+                                    | First Message
 
                                 textarea(
                                     id="message"
                                     name="message"
                                     placeholder=`Introduce yourself to ${partner.first_name}...`
+                                    maxlength="1000"
                                     required
                                 )
 
                                 button.primary-button(
                                     type="submit"
-                                ) Send Message Request
+                                )
+                                    | Send Message Request

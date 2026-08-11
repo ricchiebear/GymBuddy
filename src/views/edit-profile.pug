@@ -10,15 +10,16 @@ block content
 
         .account-settings-header
 
-            div
+            .account-settings-header-copy
+
                 p.settings-eyebrow
                     | PROFILE SETTINGS
 
                 h1 Edit Profile
 
                 p
-                    | Update your personal information and
-                    | fitness profile.
+                    | Update your personal details, profile photo
+                    | and fitness information.
 
             a.settings-back-link(
                 href="/profile"
@@ -61,23 +62,31 @@ block content
 
                     .settings-photo-info
 
+                        p.settings-photo-label
+                            | PROFILE PHOTO
+
                         h2
                             | #{user.first_name} #{user.last_name}
 
-                        p
-                            | JPG, PNG or other image formats.
-                            | Maximum file size 5MB.
+                        p.settings-photo-help
+                            | Upload a clear photo so other GymBuddy users
+                            | can recognise you.
 
-                        label.settings-upload-button(
-                            for="profile_picture"
-                        )
-                            | Change Profile Photo
+                        .settings-photo-actions
+
+                            label.settings-upload-button(
+                                for="profile_picture"
+                            )
+                                | Change Photo
+
+                            span.settings-photo-formats
+                                | JPG, PNG, WebP, HEIC or HEIF · Max 10MB
 
                         input.settings-file-input(
                             type="file"
                             id="profile_picture"
                             name="profile_picture"
-                            accept="image/*"
+                            accept="image/*,.heic,.heif"
                         )
 
 
@@ -92,11 +101,16 @@ block content
 
                     .settings-section-heading
 
-                        h2 Personal Information
+                        div
 
-                        p
-                            | Manage the basic details attached
-                            | to your GymBuddy profile.
+                            p.settings-section-eyebrow
+                                | PERSONAL INFORMATION
+
+                            h2 Your Details
+
+                            p
+                                | These details are used across your
+                                | GymBuddy profile and activity.
 
 
                     .settings-form-grid
@@ -113,6 +127,7 @@ block content
                                 id="first_name"
                                 name="first_name"
                                 value=user.first_name
+                                placeholder="Enter your first name"
                                 required
                             )
 
@@ -129,6 +144,7 @@ block content
                                 id="last_name"
                                 name="last_name"
                                 value=user.last_name
+                                placeholder="Enter your last name"
                                 required
                             )
 
@@ -148,8 +164,9 @@ block content
                             readonly
                         )
 
-                        small
-                            | Your GymBuddy email cannot currently be changed.
+                        small.settings-field-note
+                            | Your GymBuddy email is linked to your account
+                            | and cannot currently be changed here.
 
 
                 //=================================================
@@ -163,11 +180,16 @@ block content
 
                     .settings-section-heading
 
-                        h2 Fitness Profile
+                        div
 
-                        p
-                            | Keep these details accurate so GymBuddy
-                            | can improve your recommendations.
+                            p.settings-section-eyebrow
+                                | FITNESS PROFILE
+
+                            h2 Your Fitness Preferences
+
+                            p
+                                | Keep these details accurate so GymBuddy
+                                | can personalise recommendations and coaching.
 
 
                     .settings-field
@@ -175,7 +197,7 @@ block content
                         label(
                             for="fitness_goal"
                         )
-                            | Fitness Goal
+                            | Primary Fitness Goal
 
                         select(
                             id="fitness_goal"
@@ -220,12 +242,12 @@ block content
                             name="profile_bio"
                             rows="5"
                             maxlength="500"
-                            placeholder="Tell other GymBuddy users about yourself..."
+                            placeholder="Tell other GymBuddy users about your training style, goals or experience..."
                         )= user.profile_bio || ""
 
-                        small
-                            | Share your training interests, experience
-                            | or what you're looking for in a workout partner.
+                        small.settings-field-note
+                            | This is visible on your profile and helps
+                            | potential workout partners understand you better.
 
 
                 //=================================================
@@ -237,12 +259,22 @@ block content
 
                 .settings-actions
 
-                    a.settings-cancel-button(
-                        href="/profile"
-                    )
-                        | Cancel
+                    .settings-actions-copy
 
-                    button.settings-save-button(
-                        type="submit"
-                    )
-                        | Save Changes
+                        strong
+                            | Ready to update your profile?
+
+                        span
+                            | Your changes will appear on your GymBuddy profile.
+
+                    .settings-actions-buttons
+
+                        a.settings-cancel-button(
+                            href="/profile"
+                        )
+                            | Cancel
+
+                        button.settings-save-button(
+                            type="submit"
+                        )
+                            | Save Changes

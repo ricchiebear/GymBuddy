@@ -1,86 +1,262 @@
 extends layout
 
 block content
-    main.public-profile-page
-        .public-profile-header
-            .public-profile-user
-                if user.profile_picture
-                    img.public-profile-picture(
-                        src=user.profile_picture
-                        alt=`${user.first_name} ${user.last_name}`
-                    )
-                else
-                    .public-profile-picture-placeholder 👤
 
-                .public-profile-user-info
-                    h1 #{user.first_name} #{user.last_name}
+    main.public-profile-page
+
+        // =====================================================
+        // PROFILE HERO
+        // =====================================================
+
+        section.public-profile-hero
+
+            .public-profile-main
+
+                .public-profile-avatar-wrap
+
+                    if user.profile_picture
+
+                        img.public-profile-avatar(
+                            src=user.profile_picture
+                            alt=`${user.first_name} ${user.last_name}`
+                        )
+
+                    else
+
+                        .public-profile-avatar.public-profile-avatar-placeholder
+                            | 👤
+
+
+                .public-profile-info
+
+                    p.public-profile-eyebrow
+                        | GYMBUDDY PROFILE
+
+                    h1
+                        | #{user.first_name} #{user.last_name}
 
                     if user.fitness_goal
-                        p
-                            strong Fitness Goal:
-                            |  #{user.fitness_goal}
+
+                        span.public-profile-goal
+                            | 🎯 #{user.fitness_goal.replaceAll("_", " ")}
+
                     else
-                        p
-                            strong Fitness Goal:
-                            |  Not set
+
+                        span.public-profile-goal
+                            | 🎯 Fitness goal not set
+
 
                     if user.profile_bio
-                        p.profile-bio= user.profile_bio
+
+                        p.public-profile-bio
+                            = user.profile_bio
+
                     else
-                        p.profile-bio No profile bio added yet.
+
+                        p.public-profile-bio.public-profile-bio-empty
+                            | No profile bio added yet.
+
 
             .public-profile-actions
+
                 if isOwnProfile
+
                     a.primary-button(
                         href="/profile"
-                    ) View My Dashboard
+                    )
+                        | View My Dashboard
 
                     a.secondary-button(
                         href="/profile/edit"
-                    ) Edit Profile
+                    )
+                        | Edit Profile
+
                 else
+
                     a.primary-button(
                         href=`/messages/${user.user_id}`
-                    ) 💬 Message
+                    )
+                        | 💬 Message
 
-        .public-profile-stats
-            .profile-stat-card
-                h2= currentStreak
-                p Current Streak
+                    a.secondary-button(
+                        href="/recommendations"
+                    )
+                        | ← Back to Matches
 
-            .profile-stat-card
-                h2= longestStreak
-                p Longest Streak
 
-            .profile-stat-card
-                h2= completedWorkouts
-                p Completed Workouts
+        // =====================================================
+        // FITNESS STATS
+        // =====================================================
 
-        section.public-profile-history
-            h2 Recent Completed Workouts
+        section.public-profile-section
+
+            .public-profile-section-heading
+
+                div
+
+                    p.public-profile-eyebrow
+                        | FITNESS ACTIVITY
+
+                    h2 Training Overview
+
+                    p
+                        | A snapshot of this GymBuddy user's
+                        | recent consistency and workout activity.
+
+
+            .public-profile-stats
+
+                .public-profile-stat-card
+
+                    .public-profile-stat-icon
+                        | 🔥
+
+                    strong
+                        = currentStreak
+
+                    span
+                        | Current Streak
+
+
+                .public-profile-stat-card
+
+                    .public-profile-stat-icon
+                        | 🏆
+
+                    strong
+                        = longestStreak
+
+                    span
+                        | Longest Streak
+
+
+                .public-profile-stat-card
+
+                    .public-profile-stat-icon
+                        | 🏋️
+
+                    strong
+                        = completedWorkouts
+
+                    span
+                        | Completed Workouts
+
+
+        // =====================================================
+        // RECENT WORKOUT HISTORY
+        // =====================================================
+
+        section.public-profile-section
+
+            .public-profile-section-heading
+
+                div
+
+                    p.public-profile-eyebrow
+                        | RECENT ACTIVITY
+
+                    h2 Completed Workouts
+
+                    p
+                        | See some of the workouts this user
+                        | has recently completed.
+
 
             if recentWorkouts && recentWorkouts.length > 0
-                .recent-workouts-list
+
+                .public-workout-history
+
                     each workout in recentWorkouts
-                        article.recent-workout-card
-                            h3= workout.title
 
-                            p
-                                strong Type:
-                                |  #{workout.workout_type || "Not set"}
+                        article.public-workout-card
 
-                            p
-                                strong Location:
-                                |  #{workout.location || "Not set"}
+                            .public-workout-card-header
 
-                            p
-                                strong Completed:
-                                |  #{workout.workout_date ? new Date(workout.workout_date).toLocaleDateString("en-GB") : "Unknown"}
+                                .public-workout-icon
+                                    | 🏋️
+
+                                div
+
+                                    h3
+                                        = workout.title
+
+                                    span.public-workout-type
+                                        = workout.workout_type || "Workout"
+
+
+                            .public-workout-meta
+
+                                .public-workout-meta-item
+
+                                    span
+                                        | 📍
+
+                                    div
+
+                                        small
+                                            | Location
+
+                                        strong
+                                            = workout.location || "Not set"
+
+
+                                .public-workout-meta-item
+
+                                    span
+                                        | 📅
+
+                                    div
+
+                                        small
+                                            | Completed
+
+                                        if workout.workout_date
+
+                                            strong
+                                                = new Date(workout.workout_date).toLocaleDateString("en-GB")
+
+                                        else
+
+                                            strong
+                                                | Unknown
+
+
             else
-                p No completed workouts yet.
 
-        br
+                .public-profile-empty-state
 
-        a(
-            href="/recommendations"
-        ) ← Back to Recommendations
+                    .public-profile-empty-icon
+                        | 🏋️
+
+                    h3
+                        | No completed workouts yet
+
+                    p
+                        | This user hasn't recorded any completed
+                        | workouts on GymBuddy yet.
+
+
+        // =====================================================
+        // BOTTOM ACTION
+        // =====================================================
+
+        if !isOwnProfile
+
+            section.public-profile-cta
+
+                div
+
+                    p.public-profile-eyebrow
+                        | READY TO CONNECT?
+
+                    h2
+                        | Start a conversation
+
+                    p
+                        | If this GymBuddy looks like a good match,
+                        | send a message and plan a session.
+
+                a.primary-button(
+                    href=`/messages/${user.user_id}`
+                )
+                    | 💬 Message #{user.first_name}

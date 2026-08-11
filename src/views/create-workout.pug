@@ -1,58 +1,322 @@
 extends layout
 
 block content
-  h1 Create Workout
 
-  form(method='POST' action='/workouts/create' enctype='multipart/form-data')
-    p
-      label(for='title') Title:
-      input(type='text' name='title' required)
+    main.create-workout-page
 
-    p
-      | Workout Type:
-      select(name='workout_type' required)
-        option(value='') Select workout type
-        option(value='Strength') Strength
-        option(value='Cardio') Cardio
-        option(value='Running') Running
-        option(value='Cycling') Cycling
-        option(value='Dance') Dance
-        option(value='Football') Football
-        option(value='Swimming') Swimming
+        //=====================================================
+        // PAGE HEADER
+        //=====================================================
 
-    p
-      label(for='location') Location:
-      select(name="location" id="location" required)
-        option(value="" disabled selected) Select location
-        option(value="London") London
-        option(value="Manchester") Manchester 
-        option(value="Birmingham") Birmingham
-        option(value="Leeds") Leeds
-        option(value="Glasgow") Glasgow
-        option(value="Liverpool") Liverpool
-        option(value="Bristol") Bristol
-        option(value="Sheffield") Sheffield
-        option(value="Edinburgh") Edinburgh
-        option(value="Cardiff") Cardiff
-        option(value="Coventry") Coventry 
-        option(value="Nottingham") Nottingham
-        option(value="Leicester") Leicester
-        option(value="Southampton") Southampton
-        option(value="Newcastle") Newcastle
-        option(value="Brighton") Brighton
-        option(value="Plymouth") Plymouth
+        section.create-workout-header
+
+            .create-workout-header-copy
+
+                p.create-workout-eyebrow
+                    | NEW WORKOUT
+
+                h1 Create a Workout
+
+                p
+                    | Set up a training session, choose the workout type,
+                    | location and time, then invite GymBuddy users to join.
+
+            a.create-workout-back(
+                href="/workouts"
+            )
+                | ← Back to Workouts
 
 
-    p
-      label(for="start_time") Start Time:
-      input(type='datetime-local' name='start_time' required)
+        //=====================================================
+        // CREATE WORKOUT FORM
+        //=====================================================
 
-    p
-      label(for="end_time") End Time:
-      input(type='datetime-local' name='end_time' required)
+        section.create-workout-card
 
-    p
-      label(for="workout_image") Workout Image:
-      input(type='file' name='workout_image')
+            form.create-workout-form(
+                method="POST"
+                action="/workouts/create"
+                enctype="multipart/form-data"
+            )
 
-    button(type='submit') Create Workout
+                //=================================================
+                // BASIC INFORMATION
+                //=================================================
+
+                .create-workout-section
+
+                    .create-workout-section-heading
+
+                        p.create-workout-section-eyebrow
+                            | WORKOUT DETAILS
+
+                        h2 Basic Information
+
+                        p
+                            | Give your workout a clear title and choose
+                            | the type of training session.
+
+
+                    .create-workout-field
+
+                        label(
+                            for="title"
+                        )
+                            | Workout Title
+
+                        input(
+                            type="text"
+                            id="title"
+                            name="title"
+                            placeholder="e.g. Evening Strength Session"
+                            required
+                        )
+
+                        small
+                            | Use a short title that clearly describes the session.
+
+
+                    .create-workout-grid
+
+                        .create-workout-field
+
+                            label(
+                                for="workout_type"
+                            )
+                                | Workout Type
+
+                            select(
+                                id="workout_type"
+                                name="workout_type"
+                                required
+                            )
+
+                                option(
+                                    value=""
+                                    disabled
+                                    selected
+                                )
+                                    | Select workout type
+
+                                option(value="Strength")
+                                    | Strength
+
+                                option(value="Cardio")
+                                    | Cardio
+
+                                option(value="Running")
+                                    | Running
+
+                                option(value="Cycling")
+                                    | Cycling
+
+                                option(value="Dance")
+                                    | Dance
+
+                                option(value="Football")
+                                    | Football
+
+                                option(value="Swimming")
+                                    | Swimming
+
+
+                        .create-workout-field
+
+                            label(
+                                for="location"
+                            )
+                                | Location
+
+                            select(
+                                id="location"
+                                name="location"
+                                required
+                            )
+
+                                option(
+                                    value=""
+                                    disabled
+                                    selected
+                                )
+                                    | Select location
+
+                                option(value="London")
+                                    | London
+
+                                option(value="Manchester")
+                                    | Manchester
+
+                                option(value="Birmingham")
+                                    | Birmingham
+
+                                option(value="Leeds")
+                                    | Leeds
+
+                                option(value="Glasgow")
+                                    | Glasgow
+
+                                option(value="Liverpool")
+                                    | Liverpool
+
+                                option(value="Bristol")
+                                    | Bristol
+
+                                option(value="Sheffield")
+                                    | Sheffield
+
+                                option(value="Edinburgh")
+                                    | Edinburgh
+
+                                option(value="Cardiff")
+                                    | Cardiff
+
+                                option(value="Coventry")
+                                    | Coventry
+
+                                option(value="Nottingham")
+                                    | Nottingham
+
+                                option(value="Leicester")
+                                    | Leicester
+
+                                option(value="Southampton")
+                                    | Southampton
+
+                                option(value="Newcastle")
+                                    | Newcastle
+
+                                option(value="Brighton")
+                                    | Brighton
+
+                                option(value="Plymouth")
+                                    | Plymouth
+
+
+                //=================================================
+                // DATE & TIME
+                //=================================================
+
+                .create-workout-divider
+
+
+                .create-workout-section
+
+                    .create-workout-section-heading
+
+                        p.create-workout-section-eyebrow
+                            | SCHEDULE
+
+                        h2 Date & Time
+
+                        p
+                            | Choose when the workout starts and when
+                            | the session is expected to finish.
+
+
+                    .create-workout-grid
+
+                        .create-workout-field
+
+                            label(
+                                for="start_time"
+                            )
+                                | Start Time
+
+                            input(
+                                type="datetime-local"
+                                id="start_time"
+                                name="start_time"
+                                required
+                            )
+
+
+                        .create-workout-field
+
+                            label(
+                                for="end_time"
+                            )
+                                | End Time
+
+                            input(
+                                type="datetime-local"
+                                id="end_time"
+                                name="end_time"
+                                required
+                            )
+
+
+                //=================================================
+                // WORKOUT IMAGE
+                //=================================================
+
+                .create-workout-divider
+
+
+                .create-workout-section
+
+                    .create-workout-section-heading
+
+                        p.create-workout-section-eyebrow
+                            | WORKOUT IMAGE
+
+                        h2 Add a Cover Image
+
+                        p
+                            | Add a photo to make your workout easier
+                            | to recognise in the workout discovery page.
+
+
+                    .create-workout-upload
+
+                        .create-workout-upload-icon
+                            | 📷
+
+                        .create-workout-upload-copy
+
+                            strong
+                                | Choose a workout image
+
+                            p
+                                | Select an image from your device.
+
+                            label.create-workout-upload-button(
+                                for="workout_image"
+                            )
+                                | Choose Image
+
+                            input.create-workout-file-input(
+                                type="file"
+                                id="workout_image"
+                                name="workout_image"
+                                accept="image/*"
+                            )
+
+
+                //=================================================
+                // FORM ACTIONS
+                //=================================================
+
+                .create-workout-divider
+
+
+                .create-workout-actions
+
+                    .create-workout-actions-copy
+
+                        strong
+                            | Ready to create your workout?
+
+                        span
+                            | You can manage it later from My Workouts.
+
+                    .create-workout-action-buttons
+
+                        a.create-workout-cancel(
+                            href="/workouts"
+                        )
+                            | Cancel
+
+                        button.create-workout-submit(
+                            type="submit"
+                        )
+                            | Create Workout

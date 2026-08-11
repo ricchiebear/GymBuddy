@@ -1,97 +1,345 @@
 extends layout
 
 block content
+
     main.recommendations-page
-        .page-header
-            div
-                h1 🤝 Recommended Workout Partners
+
+        // =====================================================
+        // PAGE HERO
+        // =====================================================
+
+        section.recommendations-hero
+
+            .recommendations-hero-content
+
+                p.recommendations-eyebrow
+                    | GYMBUDDY MATCHING
+
+                h1
+                    | Find Your Ideal
+                    span  Workout Partner
+
+                p.recommendations-hero-description
+                    | Discover GymBuddy users who match your
+                    | fitness goals, consistency and workout activity.
+
+
+            .recommendations-hero-visual
+
+                .recommendations-hero-icon
+                    | 🤝
 
                 p
-                    | Based on your fitness goal, workout history,
-                    | consistency and workout interests.
+                    | Better workouts start with
+                    | the right training partner.
+
+
+        // =====================================================
+        // CURRENT USER MATCHING PROFILE
+        // =====================================================
 
         if currentUser
-            .recommendation-summary
-                h2 Your Matching Profile
 
-                p
-                    strong Fitness Goal:
-                    |  #{currentUser.fitness_goal || "Not set"}
+            section.match-profile-card
 
-                p
-                    strong Current Streak:
-                    |  #{currentUser.current_streak || 0} day#{Number(currentUser.current_streak) === 1 ? "" : "s"}
+                .match-profile-heading
 
-                p
-                    strong Completed Workouts:
-                    |  #{currentUser.completedWorkouts || 0}
+                    div
+
+                        p.recommendations-section-eyebrow
+                            | YOUR MATCHING PROFILE
+
+                        h2
+                            | What we're matching on
+
+                        p
+                            | GymBuddy uses your fitness activity
+                            | to help identify compatible partners.
+
+
+                    a.match-profile-edit(
+                        href="/profile/edit"
+                    )
+                        | Edit Profile
+
+
+                .match-profile-stats
+
+                    .match-profile-stat
+
+                        .match-profile-stat-icon
+                            | 🎯
+
+                        div
+
+                            span
+                                | Fitness Goal
+
+                            strong
+                                = currentUser.fitness_goal ? currentUser.fitness_goal.replaceAll("_", " ") : "Not set"
+
+
+                    .match-profile-stat
+
+                        .match-profile-stat-icon
+                            | 🔥
+
+                        div
+
+                            span
+                                | Current Streak
+
+                            strong
+                                | #{currentUser.current_streak || 0} day#{Number(currentUser.current_streak) === 1 ? "" : "s"}
+
+
+                    .match-profile-stat
+
+                        .match-profile-stat-icon
+                            | 🏋️
+
+                        div
+
+                            span
+                                | Completed Workouts
+
+                            strong
+                                | #{currentUser.completedWorkouts || 0}
+
+
+        // =====================================================
+        // RECOMMENDATION RESULTS
+        // =====================================================
 
         if !recommendations || recommendations.length === 0
-            .empty-state
-                h2 No recommendations yet
-                p Complete workouts and update your fitness goal to improve your recommendations.
+
+            section.match-empty-state
+
+                .match-empty-icon
+                    | 🔍
+
+                h2
+                    | No matches yet
+
+                p
+                    | Complete more workouts and keep your
+                    | fitness profile updated to improve
+                    | your recommendations.
+
+                a.match-empty-button(
+                    href="/workouts"
+                )
+                    | Explore Workouts
 
         else
-            .recommendations-grid
-                each partner, index in recommendations
-                    article.recommendation-card
-                        .recommendation-ranking
-                            span Rank ##{index + 1}
 
-                        .recommendation-profile
-                            if partner.profile_picture
-                                img.recommendation-avatar(
-                                    src=partner.profile_picture
-                                    alt=`${partner.first_name} ${partner.last_name}`
+            section.match-results
+
+                .match-results-header
+
+                    div
+
+                        p.recommendations-section-eyebrow
+                            | YOUR RECOMMENDATIONS
+
+                        h2
+                            | People you may train well with
+
+                        p
+                            | Ranked using your GymBuddy
+                            | compatibility score.
+
+
+                    .match-result-count
+                        | #{recommendations.length} match#{recommendations.length === 1 ? "" : "es"}
+
+
+                .recommendations-grid
+
+                    each partner, index in recommendations
+
+                        article.partner-match-card
+
+                            // =====================================
+                            // CARD HEADER
+                            // =====================================
+
+                            .partner-match-top
+
+                                .partner-ranking
+                                    | ##{index + 1}
+
+
+                                if partner.compatibility >= 80
+
+                                    .partner-match-badge.match-excellent
+                                        | Excellent Match
+
+                                else if partner.compatibility >= 60
+
+                                    .partner-match-badge.match-strong
+                                        | Strong Match
+
+                                else if partner.compatibility >= 40
+
+                                    .partner-match-badge.match-possible
+                                        | Possible Match
+
+                                else
+
+                                    .partner-match-badge.match-low
+                                        | Low Match
+
+
+                            // =====================================
+                            // PROFILE
+                            // =====================================
+
+                            .partner-profile
+
+                                .partner-avatar-wrapper
+
+                                    if partner.profile_picture
+
+                                        img.partner-avatar(
+                                            src=partner.profile_picture
+                                            alt=`${partner.first_name} ${partner.last_name}`
+                                        )
+
+                                    else
+
+                                        .partner-avatar.partner-avatar-placeholder
+                                            | 👤
+
+
+                                    .partner-score-circle
+                                        span
+                                            | #{partner.compatibility}%
+
+                                        small
+                                            | Match
+
+
+                                .partner-profile-info
+
+                                    h3
+                                        | #{partner.first_name} #{partner.last_name}
+
+                                    p.partner-goal
+
+                                        span
+                                            | 🎯
+
+                                        = partner.fitness_goal ? partner.fitness_goal.replaceAll("_", " ") : "Fitness goal not set"
+
+
+                            // =====================================
+                            // PARTNER STATS
+                            // =====================================
+
+                            .partner-stats
+
+                                .partner-stat
+
+                                    span.partner-stat-icon
+                                        | 🔥
+
+                                    div
+
+                                        small
+                                            | Current Streak
+
+                                        strong
+                                            | #{partner.current_streak || 0} day#{Number(partner.current_streak) === 1 ? "" : "s"}
+
+
+                                .partner-stat
+
+                                    span.partner-stat-icon
+                                        | 🏋️
+
+                                    div
+
+                                        small
+                                            | Workouts
+
+                                        strong
+                                            | #{partner.completedWorkouts || 0}
+
+
+                            // =====================================
+                            // MATCH SCORE
+                            // =====================================
+
+                            .compatibility-meter
+
+                                .compatibility-meter-header
+
+                                    span
+                                        | Compatibility
+
+                                    strong
+                                        | #{partner.compatibility}%
+
+
+                                .compatibility-track
+
+                                    .compatibility-fill(
+                                        style=`width: ${partner.compatibility}%`
+                                    )
+
+
+                            // =====================================
+                            // MATCH REASONS
+                            // =====================================
+
+                            .match-reasons
+
+                                h4
+                                    | Why you're a match
+
+                                if partner.matchReasons && partner.matchReasons.length > 0
+
+                                    ul.match-reason-list
+
+                                        each reason in partner.matchReasons
+
+                                            li
+
+                                                span.match-reason-check
+                                                    | ✓
+
+                                                span
+                                                    = reason
+
+                                else
+
+                                    p.match-reasons-empty
+                                        | More activity is needed to
+                                        | explain this match.
+
+
+                            // =====================================
+                            // ACTIONS
+                            // =====================================
+
+                            .partner-match-actions
+
+                                a.partner-profile-button(
+                                    href=`/users/${partner.user_id}`
                                 )
-                            else
-                                .recommendation-avatar-placeholder 👤
 
-                            .recommendation-user-details
-                                h2
-                                    | #{partner.first_name} #{partner.last_name}
+                                    span
+                                        | 👤
 
-                                p
-                                    strong Fitness Goal:
-                                    |  #{partner.fitness_goal || "Not set"}
+                                    | View Profile
 
-                        .compatibility-section
-                            h3
-                                | #{partner.compatibility}% Match
 
-                            if partner.compatibility >= 80
-                                p.match-level Excellent Match
-                            else if partner.compatibility >= 60
-                                p.match-level Strong Match
-                            else if partner.compatibility >= 40
-                                p.match-level Possible Match
-                            else
-                                p.match-level Low Match
+                                a.partner-message-button(
+                                    href=`/messages/${partner.user_id}`
+                                )
 
-                        .recommendation-stats
-                            p
-                                strong 🔥 Current Streak:
-                                |  #{partner.current_streak || 0} day#{Number(partner.current_streak) === 1 ? "" : "s"}
+                                    span
+                                        | 💬
 
-                            p
-                                strong 🏋️ Completed Workouts:
-                                |  #{partner.completedWorkouts || 0}
-
-                        .match-reasons
-                            h3 Why this person?
-
-                            if partner.matchReasons && partner.matchReasons.length > 0
-                                ul
-                                    each reason in partner.matchReasons
-                                        li ✓ #{reason}
-                            else
-                                p There is not enough matching data yet.
-
-                        .recommendation-actions
-                            a.secondary-button(
-                                href=`/messages/${partner.user_id}`
-                            ) 💬 Message
-
-                            a.secondary-button(
-                                href=`/users/${partner.user_id}`
-                            ) 👤 View Profile
+                                    | Message

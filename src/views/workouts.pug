@@ -1,36 +1,302 @@
-extends layout 
+extends layout
 
-block content 
-    h1  Available Workouts
-    form(method="GET" action="/workouts")
-        input(type="text" name="type" placeholder="Workout type" value=filters.type)
-        input(type="text" name="location" placeholder="Location" value=filters.location)
+block content
 
-        select(name="status")
-            option(value="") All Status 
-            option(value="Open" selected=filters.status === "Open") Open 
-            option(value="Cancelled" selected=filters.status === "cancelled") Cancelled 
-            option(value="Completed" selected=filters.status === "Completed") Completed 
+    main.workouts-page
 
-        button(type="submit") Search 
-        a(href="/workouts") Clear Filters
+        // PAGE HEADER
+        section.workouts-header
 
-    if workouts.length === 0
-        p No workouts available at the moment. Please check back later.
-    else
-        each workout in workouts
-            if workout.workout_image
-                img(src=workout.workout_image alt="Workout Image" width="200")
-                
-            div
-                h2= workout.title
-                p Type: #{workout.workout_type}
-                p Location: #{workout.location}
-                p Starts:  #{workout.start_time}
-                p Ends: #{workout.end_time}
-                p Participants: #{workout.participants_count || 0}
-                p Date: #{workout.date ? workout.date.toDateString() : "N/A"}
-                p Created on: #{workout.created_at ? workout.created_at.toDateString() : "N/A"}  
-                p Updated on: #{workout.updated_at ? workout.updated_at.toDateString() : "N/A"}
-                p Status: #{workout.status}
-                a(href=`/workouts/${workout.workout_id}`) View Details
+            .workouts-header-content
+
+                p.workouts-eyebrow
+                    | DISCOVER WORKOUTS
+
+                h1 Find Your Next Workout
+
+                p.workouts-subtitle
+                    | Browse available workouts, find sessions that match
+                    | your goals and connect with other GymBuddy users.
+
+            a.workouts-create-button(
+                href="/workouts/create"
+            )
+                | + Create Workout
+
+
+        // FILTER SECTION
+        section.workout-filter-card
+
+            .workout-filter-heading
+
+                div
+                    h2 Find a Workout
+
+                    p
+                        | Search by workout type, location or status.
+
+
+            form.workout-filter-form(
+                method="GET"
+                action="/workouts"
+            )
+
+                .workout-filter-field
+
+                    label(
+                        for="type"
+                    )
+                        | Workout Type
+
+                    input(
+                        type="text"
+                        id="type"
+                        name="type"
+                        placeholder="e.g. Running, Gym, Football"
+                        value=filters && filters.type ? filters.type : ""
+                    )
+
+
+                .workout-filter-field
+
+                    label(
+                        for="location"
+                    )
+                        | Location
+
+                    input(
+                        type="text"
+                        id="location"
+                        name="location"
+                        placeholder="e.g. Hackney, London"
+                        value=filters && filters.location ? filters.location : ""
+                    )
+
+
+                .workout-filter-field
+
+                    label(
+                        for="status"
+                    )
+                        | Status
+
+                    select(
+                        id="status"
+                        name="status"
+                    )
+
+                        option(
+                            value=""
+                            selected=!filters || !filters.status
+                        )
+                            | All Statuses
+
+                        option(
+                            value="Open"
+                            selected=filters && filters.status === "Open"
+                        )
+                            | Open
+
+                        option(
+                            value="Cancelled"
+                            selected=filters && filters.status === "Cancelled"
+                        )
+                            | Cancelled
+
+                        option(
+                            value="Completed"
+                            selected=filters && filters.status === "Completed"
+                        )
+                            | Completed
+
+
+                .workout-filter-actions
+
+                    button.workout-search-button(
+                        type="submit"
+                    )
+                        | Search Workouts
+
+                    a.workout-clear-button(
+                        href="/workouts"
+                    )
+                        | Clear Filters
+
+
+        // WORKOUT RESULTS
+        section.workout-results-section
+
+            .workout-results-header
+
+                div
+                    p.workouts-eyebrow
+                        | AVAILABLE SESSIONS
+
+                    h2 Workouts
+
+                if workouts && workouts.length > 0
+
+                    span.workout-result-count
+                        | #{workouts.length} workout#{workouts.length === 1 ? "" : "s"} found
+
+
+            if !workouts || workouts.length === 0
+
+                section.workout-empty-state
+
+                    .workout-empty-icon
+                        | 🏋️
+
+                    h2 No workouts found
+
+                    p
+                        | We couldn't find any workouts matching
+                        | your current filters.
+
+                    .workout-empty-actions
+
+                        a.workout-empty-primary(
+                            href="/workouts"
+                        )
+                            | Clear Filters
+
+                        a.workout-empty-secondary(
+                            href="/workouts/create"
+                        )
+                            | Create a Workout
+
+            else
+
+                section.workout-discovery-grid
+
+                    each workout in workouts
+
+                        article.workout-discovery-card
+
+                            // WORKOUT IMAGE
+                            .workout-card-image
+
+                                if workout.workout_image
+
+                                    img(
+                                        src=workout.workout_image
+                                        alt=workout.title
+                                    )
+
+                                else
+
+                                    .workout-image-placeholder
+
+                                        span
+                                            | 🏋️
+
+
+                                if workout.status
+
+                                    span.workout-status-badge(
+                                        class=`workout-status-${workout.status.toLowerCase()}`
+                                    )
+                                        = workout.status
+
+
+                            // WORKOUT INFORMATION
+                            .workout-card-body
+
+                                .workout-card-top
+
+                                    if workout.workout_type
+
+                                        span.workout-type-badge
+                                            = workout.workout_type
+
+
+                                h2.workout-card-title
+                                    = workout.title
+
+
+                                .workout-card-details
+
+                                    .workout-card-detail
+
+                                        span.workout-detail-icon
+                                            | 📍
+
+                                        div
+
+                                            small
+                                                | Location
+
+                                            strong
+                                                = workout.location || "Location not specified"
+
+
+                                    .workout-card-detail
+
+                                        span.workout-detail-icon
+                                            | 📅
+
+                                        div
+
+                                            small
+                                                | Date
+
+                                            if workout.date
+
+                                                strong
+                                                    = new Date(workout.date).toLocaleDateString("en-GB")
+
+                                            else
+
+                                                strong
+                                                    | Date not available
+
+
+                                    .workout-card-detail
+
+                                        span.workout-detail-icon
+                                            | 🕐
+
+                                        div
+
+                                            small
+                                                | Time
+
+                                            if workout.start_time
+
+                                                strong
+                                                    | #{workout.start_time}
+
+                                                    if workout.end_time
+                                                        |  – #{workout.end_time}
+
+                                            else
+
+                                                strong
+                                                    | Time not available
+
+
+                                    .workout-card-detail
+
+                                        span.workout-detail-icon
+                                            | 👥
+
+                                        div
+
+                                            small
+                                                | Participants
+
+                                            strong
+                                                = workout.participants_count || 0
+
+
+                                .workout-card-footer
+
+                                    if workout.created_at
+
+                                        small.workout-created-date
+                                            | Created #{new Date(workout.created_at).toLocaleDateString("en-GB")}
+
+                                    a.workout-details-button(
+                                        href=`/workouts/${workout.workout_id}`
+                                    )
+                                        | View Details →
