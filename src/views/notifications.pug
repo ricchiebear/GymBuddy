@@ -56,8 +56,6 @@ block content
 
         section.notifications-summary
 
-            // TOTAL NOTIFICATIONS
-
             .notification-summary-card
 
                 .summary-icon
@@ -75,8 +73,6 @@ block content
                         | Total Notifications
 
 
-            // UNREAD NOTIFICATIONS
-
             .notification-summary-card
 
                 .summary-icon
@@ -93,8 +89,6 @@ block content
                     span.summary-label
                         | Unread
 
-
-            // READ NOTIFICATIONS
 
             .notification-summary-card
 
@@ -128,7 +122,7 @@ block content
                 h2 Your Notifications
 
                 p
-                    | Stay updated with workout requests, messages and GymBuddy activity.
+                    | Click a notification to open the related GymBuddy activity.
 
 
         // =====================================================
@@ -145,22 +139,31 @@ block content
 
                         article.notification-item.is-read
 
-                            .notification-item-icon
-                                span ✓
+                            a.notification-main-link(
+                                href="/notifications/" + notification.notification_id + "/open"
+                                aria-label="Open notification"
+                            )
 
-                            .notification-item-content
+                                .notification-item-icon
+                                    span ✓
 
-                                .notification-item-top
+                                .notification-item-content
 
-                                    span.notification-badge.read
-                                        | Read
+                                    .notification-item-top
 
-                                    if notification.displayTime
-                                        span.notification-time
-                                            = notification.displayTime
+                                        span.notification-badge.read
+                                            | Read
 
-                                p.notification-item-message
-                                    = notification.message
+                                        if notification.displayTime
+                                            span.notification-time
+                                                = notification.displayTime
+
+                                    p.notification-item-message
+                                        = notification.message
+
+                                    if notification.target_url
+                                        span.notification-open-hint
+                                            | Open activity →
 
 
                             .notification-item-actions
@@ -181,22 +184,31 @@ block content
 
                         article.notification-item.is-unread
 
-                            .notification-item-icon
-                                span 🔔
+                            a.notification-main-link(
+                                href="/notifications/" + notification.notification_id + "/open"
+                                aria-label="Open notification"
+                            )
 
-                            .notification-item-content
+                                .notification-item-icon
+                                    span 🔔
 
-                                .notification-item-top
+                                .notification-item-content
 
-                                    span.notification-badge.new
-                                        | New
+                                    .notification-item-top
 
-                                    if notification.displayTime
-                                        span.notification-time
-                                            = notification.displayTime
+                                        span.notification-badge.new
+                                            | New
 
-                                p.notification-item-message
-                                    = notification.message
+                                        if notification.displayTime
+                                            span.notification-time
+                                                = notification.displayTime
+
+                                    p.notification-item-message
+                                        = notification.message
+
+                                    if notification.target_url
+                                        span.notification-open-hint
+                                            | Open activity →
 
 
                             .notification-item-actions

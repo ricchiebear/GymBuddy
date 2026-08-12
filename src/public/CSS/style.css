@@ -12591,3 +12591,198 @@ label {
         padding: 10px;
     }
 }
+
+/* =====================================================
+   CLICKABLE NOTIFICATIONS
+===================================================== */
+
+.notification-main-link {
+    min-width: 0;
+
+    display: grid;
+
+    grid-template-columns:
+        48px
+        minmax(0, 1fr);
+
+    align-items: center;
+
+    gap: 15px;
+
+    color: inherit;
+
+    text-decoration: none;
+
+    cursor: pointer;
+}
+
+.notification-main-link:hover
+.notification-item-message {
+    color: var(--color-primary);
+}
+
+.notification-main-link:hover
+.notification-item-icon {
+    transform: scale(1.05);
+}
+
+.notification-item-icon {
+    transition:
+        transform 0.2s ease;
+}
+
+.notification-open-hint {
+    display: inline-block;
+
+    margin-top: 7px;
+
+    color: var(--color-primary);
+
+    font-size: 10px;
+
+    font-weight: 700;
+}
+
+
+/* The card now has:
+   clickable content | action buttons
+*/
+
+.notification-item {
+    grid-template-columns:
+        minmax(0, 1fr)
+        auto;
+}
+
+
+/* =====================================================
+   MOBILE CLICKABLE NOTIFICATIONS
+===================================================== */
+
+@media (max-width: 650px) {
+
+    .notification-item {
+        grid-template-columns: 1fr;
+    }
+
+    .notification-item-actions {
+        grid-column: auto;
+
+        justify-content: flex-end;
+    }
+}
+
+/* =====================================================
+   GLOBAL USER FEEDBACK
+===================================================== */
+
+.app-feedback {
+    width: calc(100% - 40px);
+    max-width: 720px;
+
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+
+    margin: 20px auto;
+
+    padding: 14px 18px;
+
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+
+    background: #ffffff;
+
+    box-shadow: var(--shadow-small);
+}
+
+.app-feedback-icon {
+    width: 32px;
+    height: 32px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    border-radius: 50%;
+
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.app-feedback-content {
+    flex: 1;
+}
+
+.app-feedback-content strong {
+    display: block;
+
+    margin-bottom: 2px;
+
+    font-size: 12px;
+}
+
+.app-feedback-content p {
+    margin: 0;
+
+    font-size: 12px;
+
+    line-height: 1.5;
+}
+
+
+/* =====================================================
+   SUCCESS
+===================================================== */
+
+.app-feedback:has(.app-feedback-success-icon) {
+    border-color: #bbf7d0;
+
+    background: #f0fdf4;
+
+    color: #166534;
+}
+
+.app-feedback-success-icon {
+    background: #dcfce7;
+
+    color: #15803d;
+}
+
+
+/* =====================================================
+   ERROR
+===================================================== */
+
+.app-feedback:has(.app-feedback-error-icon) {
+    border-color: #fecaca;
+
+    background: #fef2f2;
+
+    color: #991b1b;
+}
+
+.app-feedback-error-icon {
+    background: #fee2e2;
+
+    color: #dc2626;
+}
+
+
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media (max-width: 650px) {
+
+    .app-feedback {
+        width: calc(100% - 28px);
+
+        margin: 14px auto;
+
+        padding: 12px 14px;
+    }
+}

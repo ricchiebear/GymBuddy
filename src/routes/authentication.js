@@ -8,17 +8,54 @@ const db = require("../config/database");
 
 const router = express.Router();
 
+
+// =====================================================
+// FEEDBACK MESSAGE HELPERS
+// =====================================================
+
+function setFeedback(
+    req,
+    type,
+    message,
+    formData = null
+) {
+    req.session.feedback = {
+        type,
+        message,
+        formData
+    };
+}
+
+
+function consumeFeedback(req) {
+    const feedback =
+        req.session.feedback || null;
+
+    delete req.session.feedback;
+
+    return feedback;
+}
+
+
 // =====================================================
 // LOGIN PROTECTION
 // =====================================================
 
 function requireLogin(req, res, next) {
     if (!req.session.userId) {
+
+        setFeedback(
+            req,
+            "error",
+            "Please log in to continue."
+        );
+
         return res.redirect("/login");
     }
 
     next();
 }
+
 
 // =====================================================
 // PROFILE PICTURE UPLOAD DIRECTORY
@@ -31,28 +68,24 @@ const uploadDirectory = path.join(
     "uploads"
 );
 
-// Create uploads folder automatically.
+
 if (!fs.existsSync(uploadDirectory)) {
-    fs.mkdirSync(uploadDirectory, {
-        recursive: true
-    });
+    fs.mkdirSync(
+        uploadDirectory,
+        {
+            recursive: true
+        }
+    );
 }
+
 
 // =====================================================
 // MULTER STORAGE
 // =====================================================
-//
-// We use memoryStorage instead of saving the uploaded
-// file immediately.
-//
-// This allows us to:
-// 1. inspect the file
-// 2. convert HEIC/HEIF to JPEG
-// 3. save the final browser-friendly file ourselves
-//
-// =====================================================
 
-const storage = multer.memoryStorage();
+const storage =
+    multer.memoryStorage();
+
 
 // =====================================================
 // ACCEPTED PROFILE PICTURE TYPES
@@ -66,6 +99,7 @@ const allowedMimeTypes = [
     "image/heif"
 ];
 
+
 const allowedExtensions = [
     ".jpg",
     ".jpeg",
@@ -75,52 +109,60 @@ const allowedExtensions = [
     ".heif"
 ];
 
+
 // =====================================================
 // MULTER CONFIGURATION
 // =====================================================
 
 const upload = multer({
+
     storage,
 
     limits: {
-        fileSize: 10 * 1024 * 1024
+        fileSize:
+            10 * 1024 * 1024
     },
 
-    fileFilter: (req, file, cb) => {
-        const extension =
-            path.extname(
-                file.originalname
-            ).toLowerCase();
+    fileFilter:
+        (req, file, cb) => {
 
-        const allowedMime =
-            allowedMimeTypes.includes(
-                file.mimetype
+            const extension =
+                path.extname(
+                    file.originalname
+                ).toLowerCase();
+
+
+            const allowedMime =
+                allowedMimeTypes.includes(
+                    file.mimetype
+                );
+
+
+            const allowedExtension =
+                allowedExtensions.includes(
+                    extension
+                );
+
+
+            if (
+                allowedMime ||
+                allowedExtension
+            ) {
+                return cb(
+                    null,
+                    true
+                );
+            }
+
+
+            return cb(
+                new Error(
+                    "Please upload a JPG, PNG, WebP, HEIC or HEIF image."
+                )
             );
-
-        const allowedExtension =
-            allowedExtensions.includes(
-                extension
-            );
-
-        // Some browsers may report HEIC as
-        // application/octet-stream.
-        //
-        // Because of that, we also check the file
-        // extension rather than relying only on MIME.
-        if (
-            allowedMime ||
-            allowedExtension
-        ) {
-            return cb(null, true);
         }
-
-        return cb(
-            new Error(
-                "Please upload a JPG, PNG, WebP, HEIC or HEIF image."
-            )
-        );
-    }
 });
+
 
 // =====================================================
 // PROFILE PICTURE UPLOAD MIDDLEWARE
@@ -131,15 +173,18 @@ function uploadProfilePicture(
     res,
     next
 ) {
+
     upload.single(
         "profile_picture"
     )(
         req,
         res,
         (error) => {
+
             if (!error) {
                 return next();
             }
+
 
             if (
                 error instanceof
@@ -147,70 +192,103 @@ function uploadProfilePicture(
                 error.code ===
                     "LIMIT_FILE_SIZE"
             ) {
-                return res.status(400).send(
-                    "Profile picture must be smaller than 10MB."
+
+                setFeedback(
+                    req,
+                    "error",
+                    "Your profile picture must be smaller than 10MB."
+                );
+
+                return res.redirect(
+                    "/profile/edit"
                 );
             }
 
+
             console.error(
-                "Profile picture upload error:",
+                "PROFILE PICTURE UPLOAD ERROR:",
                 error
             );
 
-            return res.status(400).send(
+
+            setFeedback(
+                req,
+                "error",
                 error.message ||
-                "Unable to upload profile picture."
+                "We couldn't upload that profile picture."
+            );
+
+
+            return res.redirect(
+                "/profile/edit"
             );
         }
     );
 }
+
 
 // =====================================================
 // SAVE PROFILE PICTURE
 // =====================================================
 
 async function saveProfilePicture(file) {
+
     if (!file) {
         return null;
     }
+
 
     const originalExtension =
         path.extname(
             file.originalname
         ).toLowerCase();
 
+
     const isHeic =
-        originalExtension === ".heic" ||
-        originalExtension === ".heif" ||
-        file.mimetype === "image/heic" ||
-        file.mimetype === "image/heif";
+        originalExtension ===
+            ".heic" ||
+
+        originalExtension ===
+            ".heif" ||
+
+        file.mimetype ===
+            "image/heic" ||
+
+        file.mimetype ===
+            "image/heif";
+
 
     const uniqueBaseName =
         Date.now() +
         "-" +
         Math.round(
-            Math.random() * 1e9
+            Math.random() *
+            1e9
         );
 
+
     // =================================================
-    // HEIC / HEIF
-    // =================================================
-    //
-    // Convert it to JPEG so that it can display
-    // reliably in normal <img> elements.
-    //
+    // HEIC / HEIF → JPEG
     // =================================================
 
     if (isHeic) {
+
         const jpegBuffer =
             await heicConvert({
-                buffer: file.buffer,
-                format: "JPEG",
-                quality: 0.9
+                buffer:
+                    file.buffer,
+
+                format:
+                    "JPEG",
+
+                quality:
+                    0.9
             });
+
 
         const filename =
             `${uniqueBaseName}.jpg`;
+
 
         const destination =
             path.join(
@@ -218,18 +296,25 @@ async function saveProfilePicture(file) {
                 filename
             );
 
-        await fs.promises.writeFile(
-            destination,
-            jpegBuffer
-        );
+
+        await fs.promises
+            .writeFile(
+                destination,
+                jpegBuffer
+            );
+
 
         return {
             filename,
-            filePath: destination,
+
+            filePath:
+                destination,
+
             publicPath:
                 `/uploads/${filename}`
         };
     }
+
 
     // =================================================
     // JPG / PNG / WEBP
@@ -242,8 +327,10 @@ async function saveProfilePicture(file) {
             ? originalExtension
             : ".jpg";
 
+
     const filename =
         `${uniqueBaseName}${safeExtension}`;
+
 
     const destination =
         path.join(
@@ -251,18 +338,24 @@ async function saveProfilePicture(file) {
             filename
         );
 
+
     await fs.promises.writeFile(
         destination,
         file.buffer
     );
 
+
     return {
         filename,
-        filePath: destination,
+
+        filePath:
+            destination,
+
         publicPath:
             `/uploads/${filename}`
     };
 }
+
 
 // =====================================================
 // DELETE FILE SAFELY
@@ -271,16 +364,23 @@ async function saveProfilePicture(file) {
 async function deleteFileSafely(
     filePath
 ) {
+
     if (!filePath) {
         return;
     }
 
+
     try {
+
         await fs.promises.unlink(
             filePath
         );
+
     } catch (error) {
-        if (error.code !== "ENOENT") {
+
+        if (
+            error.code !== "ENOENT"
+        ) {
             console.error(
                 "Unable to remove file:",
                 error
@@ -289,6 +389,7 @@ async function deleteFileSafely(
     }
 }
 
+
 // =====================================================
 // LOGIN PAGE
 // =====================================================
@@ -296,17 +397,56 @@ async function deleteFileSafely(
 router.get(
     "/login",
     (req, res) => {
-        if (req.session.userId) {
+
+        if (
+            req.session.userId
+        ) {
             return res.redirect(
                 "/profile"
             );
         }
 
-        res.render("Login", {
-            title: "Login"
-        });
+
+        let feedback =
+            consumeFeedback(req);
+
+
+        // Logout destroys the old session,
+        // so use a query parameter for this
+        // particular success message.
+        if (
+            req.query.loggedOut ===
+            "true"
+        ) {
+            feedback = {
+                type:
+                    "success",
+
+                message:
+                    "You have been logged out successfully."
+            };
+        }
+
+
+        const formData =
+            feedback?.formData ||
+            {};
+
+
+        return res.render(
+            "Login",
+            {
+                title:
+                    "Login",
+
+                feedback,
+
+                formData
+            }
+        );
     }
 );
+
 
 // =====================================================
 // REGISTER PAGE
@@ -315,17 +455,39 @@ router.get(
 router.get(
     "/register",
     (req, res) => {
-        if (req.session.userId) {
+
+        if (
+            req.session.userId
+        ) {
             return res.redirect(
                 "/profile"
             );
         }
 
-        res.render("Register", {
-            title: "Register"
-        });
+
+        const feedback =
+            consumeFeedback(req);
+
+
+        const formData =
+            feedback?.formData ||
+            {};
+
+
+        return res.render(
+            "Register",
+            {
+                title:
+                    "Register",
+
+                feedback,
+
+                formData
+            }
+        );
     }
 );
+
 
 // =====================================================
 // REGISTER USER
@@ -334,7 +496,9 @@ router.get(
 router.post(
     "/register",
     async (req, res) => {
+
         try {
+
             const {
                 first_name,
                 last_name,
@@ -345,55 +509,139 @@ router.post(
                 profile_bio
             } = req.body;
 
+
+            // Store only safe form information.
+            // Never put passwords into session feedback.
+
+            const formData = {
+                first_name:
+                    first_name || "",
+
+                last_name:
+                    last_name || "",
+
+                email:
+                    email || "",
+
+                fitness_goal:
+                    fitness_goal || "",
+
+                profile_bio:
+                    profile_bio || ""
+            };
+
+
+            // =================================================
+            // REQUIRED FIELDS
+            // =================================================
+
             if (
-                !first_name ||
-                !last_name ||
-                !email ||
+                !first_name?.trim() ||
+                !last_name?.trim() ||
+                !email?.trim() ||
                 !password ||
                 !confirm_password ||
                 !fitness_goal
             ) {
-                return res.status(400).send(
-                    "Please complete all required fields."
+
+                setFeedback(
+                    req,
+                    "error",
+                    "Please complete all required fields.",
+                    formData
+                );
+
+                return res.redirect(
+                    "/register"
                 );
             }
+
+
+            // =================================================
+            // CLEAN EMAIL
+            // =================================================
 
             const cleanEmail =
                 email
                     .trim()
                     .toLowerCase();
 
+
+            // =================================================
+            // EMAIL VALIDATION
+            // =================================================
+
             if (
                 !cleanEmail.endsWith(
                     "@buddy.co.uk"
                 )
             ) {
-                return res.status(400).send(
-                    "Email must end with @buddy.co.uk."
+
+                setFeedback(
+                    req,
+                    "error",
+                    "Your email must end with @buddy.co.uk.",
+                    formData
+                );
+
+                return res.redirect(
+                    "/register"
                 );
             }
+
+
+            // =================================================
+            // PASSWORD MATCH
+            // =================================================
 
             if (
                 password !==
                 confirm_password
             ) {
-                return res.status(400).send(
-                    "Passwords do not match."
+
+                setFeedback(
+                    req,
+                    "error",
+                    "Your passwords do not match. Please try again.",
+                    formData
+                );
+
+                return res.redirect(
+                    "/register"
                 );
             }
 
+
+            // =================================================
+            // PASSWORD STRENGTH
+            // =================================================
+
             const passwordRegex =
                 /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+
 
             if (
                 !passwordRegex.test(
                     password
                 )
             ) {
-                return res.status(400).send(
-                    "Password must contain at least 8 characters, including an uppercase letter, a lowercase letter and a number."
+
+                setFeedback(
+                    req,
+                    "error",
+                    "Your password must contain at least 8 characters, including an uppercase letter, lowercase letter and number.",
+                    formData
+                );
+
+                return res.redirect(
+                    "/register"
                 );
             }
+
+
+            // =================================================
+            // DUPLICATE EMAIL CHECK
+            // =================================================
 
             const [existingUsers] =
                 await db.query(
@@ -404,19 +652,39 @@ router.post(
                     [cleanEmail]
                 );
 
+
             if (
-                existingUsers.length > 0
+                existingUsers.length >
+                0
             ) {
-                return res.status(409).send(
-                    "This email is already registered. Please log in instead."
+
+                setFeedback(
+                    req,
+                    "error",
+                    "An account already exists with this email. Try logging in instead.",
+                    formData
+                );
+
+                return res.redirect(
+                    "/register"
                 );
             }
+
+
+            // =================================================
+            // PASSWORD HASH
+            // =================================================
 
             const hashedPassword =
                 await bcrypt.hash(
                     password,
                     10
                 );
+
+
+            // =================================================
+            // CREATE USER
+            // =================================================
 
             await db.query(
                 `INSERT INTO users
@@ -431,40 +699,76 @@ router.post(
                  VALUES (?, ?, ?, ?, ?, ?)`,
                 [
                     first_name.trim(),
+
                     last_name.trim(),
+
                     cleanEmail,
+
                     hashedPassword,
+
                     fitness_goal,
-                    profile_bio?.trim() ||
+
+                    profile_bio
+                        ?.trim() ||
                         null
                 ]
             );
+
+
+            // =================================================
+            // SUCCESS
+            // =================================================
+
+            setFeedback(
+                req,
+                "success",
+                "Your GymBuddy account has been created successfully. You can now log in."
+            );
+
 
             return res.redirect(
                 "/login"
             );
 
         } catch (error) {
+
             console.error(
-                "Registration error:",
+                "REGISTRATION ERROR:",
                 error
             );
+
 
             if (
                 error.code ===
                 "ER_DUP_ENTRY"
             ) {
-                return res.status(409).send(
-                    "This email is already registered. Please log in instead."
+
+                setFeedback(
+                    req,
+                    "error",
+                    "An account already exists with this email."
+                );
+
+                return res.redirect(
+                    "/register"
                 );
             }
 
-            return res.status(500).send(
-                "An error occurred during registration."
+
+            setFeedback(
+                req,
+                "error",
+                "Something went wrong while creating your account. Please try again."
+            );
+
+
+            return res.redirect(
+                "/register"
             );
         }
     }
 );
+
 
 // =====================================================
 // LOGIN USER
@@ -473,25 +777,52 @@ router.post(
 router.post(
     "/login",
     async (req, res) => {
+
         try {
+
             const {
                 email,
                 password
             } = req.body;
 
+
+            const formData = {
+                email:
+                    email || ""
+            };
+
+
+            // =================================================
+            // REQUIRED FIELDS
+            // =================================================
+
             if (
-                !email ||
+                !email?.trim() ||
                 !password
             ) {
-                return res.status(400).send(
-                    "Please enter your email and password."
+
+                setFeedback(
+                    req,
+                    "error",
+                    "Please enter your email and password.",
+                    formData
+                );
+
+                return res.redirect(
+                    "/login"
                 );
             }
+
 
             const cleanEmail =
                 email
                     .trim()
                     .toLowerCase();
+
+
+            // =================================================
+            // FIND USER
+            // =================================================
 
             const [users] =
                 await db.query(
@@ -502,16 +833,31 @@ router.post(
                     [cleanEmail]
                 );
 
+
             if (
                 users.length === 0
             ) {
-                return res.status(401).send(
-                    "Incorrect email or password."
+
+                setFeedback(
+                    req,
+                    "error",
+                    "Incorrect email or password.",
+                    formData
+                );
+
+                return res.redirect(
+                    "/login"
                 );
             }
 
+
             const user =
                 users[0];
+
+
+            // =================================================
+            // PASSWORD CHECK
+            // =================================================
 
             const validPassword =
                 await bcrypt.compare(
@@ -519,25 +865,53 @@ router.post(
                     user.password
                 );
 
-            if (!validPassword) {
-                return res.status(401).send(
-                    "Incorrect email or password."
+
+            if (
+                !validPassword
+            ) {
+
+                setFeedback(
+                    req,
+                    "error",
+                    "Incorrect email or password.",
+                    formData
+                );
+
+                return res.redirect(
+                    "/login"
                 );
             }
+
+
+            // =================================================
+            // CREATE SESSION
+            // =================================================
 
             req.session.userId =
                 user.user_id;
 
+
             req.session.userName =
                 `${user.first_name} ${user.last_name}`;
 
+
+            setFeedback(
+                req,
+                "success",
+                `Welcome back, ${user.first_name}!`
+            );
+
+
             req.session.save(
                 (error) => {
+
                     if (error) {
+
                         console.error(
-                            "Session save error:",
+                            "SESSION SAVE ERROR:",
                             error
                         );
+
 
                         return res
                             .status(500)
@@ -546,6 +920,7 @@ router.post(
                             );
                     }
 
+
                     return res.redirect(
                         "/profile"
                     );
@@ -553,17 +928,27 @@ router.post(
             );
 
         } catch (error) {
+
             console.error(
-                "Login error:",
+                "LOGIN ERROR:",
                 error
             );
 
-            return res.status(500).send(
-                "An error occurred during login."
+
+            setFeedback(
+                req,
+                "error",
+                "Something went wrong while logging you in. Please try again."
+            );
+
+
+            return res.redirect(
+                "/login"
             );
         }
     }
 );
+
 
 // =====================================================
 // PROFILE DASHBOARD
@@ -573,9 +958,12 @@ router.get(
     "/profile",
     requireLogin,
     async (req, res) => {
+
         try {
+
             const userId =
                 req.session.userId;
+
 
             const [users] =
                 await db.query(
@@ -594,20 +982,25 @@ router.get(
                     [userId]
                 );
 
+
             if (
                 users.length === 0
             ) {
+
                 req.session.destroy(
                     () => {}
                 );
+
 
                 return res.redirect(
                     "/login"
                 );
             }
 
+
             const user =
                 users[0];
+
 
             const [[workoutsCreated]] =
                 await db.query(
@@ -617,6 +1010,7 @@ router.get(
                     [userId]
                 );
 
+
             const [[sessionsJoined]] =
                 await db.query(
                     `SELECT COUNT(*) AS total
@@ -624,6 +1018,7 @@ router.get(
                      WHERE user_id = ?`,
                     [userId]
                 );
+
 
             const [[partners]] =
                 await db.query(
@@ -635,22 +1030,25 @@ router.get(
                         ON wp.workout_id =
                            w.workout_id
                      WHERE w.user_id = ?
-                     AND wp.user_id != ?`,
+                       AND wp.user_id != ?`,
                     [
                         userId,
                         userId
                     ]
                 );
 
+
             const [streakRows] =
                 await db.query(
                     `SELECT current_streak
                      FROM streaks
                      WHERE user_id = ?
-                     ORDER BY streak_id DESC
+                     ORDER BY
+                        streak_id DESC
                      LIMIT 1`,
                     [userId]
                 );
+
 
             const currentStreak =
                 streakRows.length > 0
@@ -660,6 +1058,11 @@ router.get(
                         0
                     )
                     : 0;
+
+
+            const feedback =
+                consumeFeedback(req);
+
 
             return res.render(
                 "Profile",
@@ -687,15 +1090,19 @@ router.get(
                         Number(
                             sessionsJoined.total ||
                             0
-                        )
+                        ),
+
+                    feedback
                 }
             );
 
         } catch (error) {
+
             console.error(
-                "Profile dashboard error:",
+                "PROFILE DASHBOARD ERROR:",
                 error
             );
+
 
             return res.status(500).send(
                 "Error loading profile dashboard."
@@ -703,6 +1110,7 @@ router.get(
         }
     }
 );
+
 
 // =====================================================
 // EDIT PROFILE PAGE
@@ -712,9 +1120,12 @@ router.get(
     "/profile/edit",
     requireLogin,
     async (req, res) => {
+
         try {
+
             const userId =
                 req.session.userId;
+
 
             const [users] =
                 await db.query(
@@ -732,29 +1143,41 @@ router.get(
                     [userId]
                 );
 
+
             if (
                 users.length === 0
             ) {
+
                 return res.status(404).send(
                     "User not found."
                 );
             }
+
+
+            const feedback =
+                consumeFeedback(req);
+
 
             return res.render(
                 "edit-profile",
                 {
                     title:
                         "Edit Profile",
+
                     user:
-                        users[0]
+                        users[0],
+
+                    feedback
                 }
             );
 
         } catch (error) {
+
             console.error(
-                "Edit profile page error:",
+                "EDIT PROFILE PAGE ERROR:",
                 error
             );
+
 
             return res.status(500).send(
                 "Error loading edit profile page."
@@ -762,6 +1185,7 @@ router.get(
         }
     }
 );
+
 
 // =====================================================
 // UPDATE PROFILE
@@ -772,12 +1196,16 @@ router.post(
     requireLogin,
     uploadProfilePicture,
     async (req, res) => {
+
         let savedProfilePicture =
             null;
 
+
         try {
+
             const userId =
                 req.session.userId;
+
 
             const {
                 first_name,
@@ -786,22 +1214,38 @@ router.post(
                 profile_bio
             } = req.body;
 
+
+            // =================================================
+            // VALIDATION
+            // =================================================
+
             if (
-                !first_name ||
-                !last_name ||
+                !first_name?.trim() ||
+                !last_name?.trim() ||
                 !fitness_goal
             ) {
-                return res.status(400).send(
+
+                setFeedback(
+                    req,
+                    "error",
                     "First name, last name and fitness goal are required."
+                );
+
+
+                return res.redirect(
+                    "/profile/edit"
                 );
             }
 
-            // =============================================
-            // Process image if supplied
-            // =============================================
+
+            // =================================================
+            // PROCESS PROFILE IMAGE
+            // =================================================
 
             if (req.file) {
+
                 try {
+
                     savedProfilePicture =
                         await saveProfilePicture(
                             req.file
@@ -810,24 +1254,35 @@ router.post(
                 } catch (
                     conversionError
                 ) {
+
                     console.error(
-                        "Profile image conversion error:",
+                        "PROFILE IMAGE CONVERSION ERROR:",
                         conversionError
                     );
 
-                    return res.status(400).send(
-                        "We could not process this image. Please try another photo."
+
+                    setFeedback(
+                        req,
+                        "error",
+                        "We couldn't process this image. Please try another photo."
+                    );
+
+
+                    return res.redirect(
+                        "/profile/edit"
                     );
                 }
             }
 
-            // =============================================
-            // Update database
-            // =============================================
+
+            // =================================================
+            // UPDATE DATABASE
+            // =================================================
 
             if (
                 savedProfilePicture
             ) {
+
                 await db.query(
                     `UPDATE users
                      SET first_name = ?,
@@ -838,17 +1293,24 @@ router.post(
                      WHERE user_id = ?`,
                     [
                         first_name.trim(),
+
                         last_name.trim(),
+
                         fitness_goal,
-                        profile_bio?.trim() ||
+
+                        profile_bio
+                            ?.trim() ||
                             null,
+
                         savedProfilePicture
                             .publicPath,
+
                         userId
                     ]
                 );
 
             } else {
+
                 await db.query(
                     `UPDATE users
                      SET first_name = ?,
@@ -858,43 +1320,77 @@ router.post(
                      WHERE user_id = ?`,
                     [
                         first_name.trim(),
+
                         last_name.trim(),
+
                         fitness_goal,
-                        profile_bio?.trim() ||
+
+                        profile_bio
+                            ?.trim() ||
                             null,
+
                         userId
                     ]
                 );
             }
 
+
+            // =================================================
+            // UPDATE SESSION NAME
+            // =================================================
+
             req.session.userName =
                 `${first_name.trim()} ${last_name.trim()}`;
+
+
+            // =================================================
+            // SUCCESS FEEDBACK
+            // =================================================
+
+            setFeedback(
+                req,
+                "success",
+                "Your profile has been updated successfully."
+            );
+
 
             return res.redirect(
                 "/profile"
             );
 
         } catch (error) {
+
             console.error(
-                "Profile update error:",
+                "PROFILE UPDATE ERROR:",
                 error
             );
+
 
             if (
                 savedProfilePicture
             ) {
+
                 await deleteFileSafely(
                     savedProfilePicture
                         .filePath
                 );
             }
 
-            return res.status(500).send(
-                "Error updating profile."
+
+            setFeedback(
+                req,
+                "error",
+                "Something went wrong while updating your profile. Please try again."
+            );
+
+
+            return res.redirect(
+                "/profile/edit"
             );
         }
     }
 );
+
 
 // =====================================================
 // PUBLIC USER PROFILE
@@ -904,24 +1400,32 @@ router.get(
     "/users/:id",
     requireLogin,
     async (req, res) => {
+
         try {
+
             const profileUserId =
                 Number(
                     req.params.id
                 );
+
 
             const currentUserId =
                 Number(
                     req.session.userId
                 );
 
+
             if (
                 !profileUserId
             ) {
-                return res.status(400).send(
-                    "User ID is missing."
-                );
+
+                return res
+                    .status(400)
+                    .send(
+                        "User ID is missing."
+                    );
             }
+
 
             const [userRows] =
                 await db.query(
@@ -939,16 +1443,22 @@ router.get(
                     [profileUserId]
                 );
 
+
             if (
                 userRows.length === 0
             ) {
-                return res.status(404).send(
-                    "User not found."
-                );
+
+                return res
+                    .status(404)
+                    .send(
+                        "User not found."
+                    );
             }
+
 
             const user =
                 userRows[0];
+
 
             const [streakRows] =
                 await db.query(
@@ -958,10 +1468,12 @@ router.get(
                         last_workout_date
                      FROM streaks
                      WHERE user_id = ?
-                     ORDER BY streak_id DESC
+                     ORDER BY
+                        streak_id DESC
                      LIMIT 1`,
                     [profileUserId]
                 );
+
 
             const streak =
                 streakRows.length > 0
@@ -977,6 +1489,7 @@ router.get(
                             null
                     };
 
+
             const [[completedResult]] =
                 await db.query(
                     `SELECT COUNT(*) AS total
@@ -984,6 +1497,7 @@ router.get(
                      WHERE user_id = ?`,
                     [profileUserId]
                 );
+
 
             const [recentWorkouts] =
                 await db.query(
@@ -1004,6 +1518,7 @@ router.get(
                      LIMIT 5`,
                     [profileUserId]
                 );
+
 
             return res.render(
                 "public-profile",
@@ -1042,17 +1557,22 @@ router.get(
             );
 
         } catch (error) {
+
             console.error(
                 "PUBLIC PROFILE ERROR:",
                 error
             );
 
-            return res.status(500).send(
-                "Error loading public profile."
-            );
+
+            return res
+                .status(500)
+                .send(
+                    "Error loading public profile."
+                );
         }
     }
 );
+
 
 // =====================================================
 // LOGOUT
@@ -1062,29 +1582,38 @@ router.get(
     "/logout",
     requireLogin,
     (req, res) => {
+
         req.session.destroy(
             (error) => {
+
                 if (error) {
+
                     console.error(
-                        "Logout error:",
+                        "LOGOUT ERROR:",
                         error
                     );
 
-                    return res.status(500).send(
-                        "Unable to log out."
-                    );
+
+                    return res
+                        .status(500)
+                        .send(
+                            "Unable to log out."
+                        );
                 }
+
 
                 res.clearCookie(
                     "connect.sid"
                 );
 
+
                 return res.redirect(
-                    "/login"
+                    "/login?loggedOut=true"
                 );
             }
         );
     }
 );
+
 
 module.exports = router;

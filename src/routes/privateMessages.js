@@ -1,6 +1,7 @@
 const express = require("express");
 const db = require("../config/database");
-const createNotification = require("../utils/createNotification");
+const createNotification =
+    require("../utils/createNotification");
 
 const router = express.Router();
 
@@ -52,6 +53,7 @@ router.get(
                 title: "Message Requests",
                 requests
             });
+
         } catch (error) {
             console.error(
                 "MESSAGE REQUESTS PAGE ERROR:",
@@ -95,6 +97,10 @@ router.post(
 
             await connection.beginTransaction();
 
+            // --------------------------------------------------
+            // LOAD AND LOCK REQUEST
+            // --------------------------------------------------
+
             const [requestRows] =
                 await connection.query(
                     `SELECT
@@ -119,6 +125,10 @@ router.post(
 
             const request = requestRows[0];
 
+            // --------------------------------------------------
+            // SECURITY CHECK
+            // --------------------------------------------------
+
             if (
                 Number(request.receiver_id) !==
                 receiverId
@@ -129,6 +139,10 @@ router.post(
                     "You cannot manage this message request."
                 );
             }
+
+            // --------------------------------------------------
+            // STATUS CHECK
+            // --------------------------------------------------
 
             if (
                 String(request.status).toLowerCase() !==
@@ -141,12 +155,20 @@ router.post(
                 );
             }
 
+            // --------------------------------------------------
+            // ACCEPT REQUEST
+            // --------------------------------------------------
+
             await connection.query(
                 `UPDATE message_requests
                  SET status = 'accepted'
                  WHERE request_id = ?`,
                 [requestId]
             );
+
+            // --------------------------------------------------
+            // CREATE FIRST MESSAGE
+            // --------------------------------------------------
 
             await connection.query(
                 `INSERT INTO messages
@@ -164,20 +186,30 @@ router.post(
                 ]
             );
 
+            // --------------------------------------------------
+            // NOTIFY ORIGINAL SENDER
+            // --------------------------------------------------
+
             await createNotification(
                 request.sender_id,
                 `${
                     req.session.userName ||
                     "The user"
                 } accepted your message request.`,
+                `/messages/${receiverId}`,
                 connection
             );
+
+            // --------------------------------------------------
+            // COMMIT TRANSACTION
+            // --------------------------------------------------
 
             await connection.commit();
 
             res.redirect(
                 `/messages/${request.sender_id}`
             );
+
         } catch (error) {
             if (connection) {
                 await connection.rollback();
@@ -193,6 +225,7 @@ router.post(
                 error.message ||
                 "Error accepting message request."
             );
+
         } finally {
             if (connection) {
                 connection.release();
@@ -216,6 +249,16 @@ router.post(
             const receiverId =
                 Number(req.session.userId);
 
+            if (!requestId) {
+                return res.status(400).send(
+                    "Message request ID is missing."
+                );
+            }
+
+            // --------------------------------------------------
+            // LOAD REQUEST
+            // --------------------------------------------------
+
             const [requestRows] = await db.query(
                 `SELECT
                     request_id,
@@ -223,7 +266,8 @@ router.post(
                     receiver_id,
                     status
                  FROM message_requests
-                 WHERE request_id = ?`,
+                 WHERE request_id = ?
+                 LIMIT 1`,
                 [requestId]
             );
 
@@ -235,6 +279,10 @@ router.post(
 
             const request = requestRows[0];
 
+            // --------------------------------------------------
+            // SECURITY CHECK
+            // --------------------------------------------------
+
             if (
                 Number(request.receiver_id) !==
                 receiverId
@@ -243,6 +291,10 @@ router.post(
                     "You cannot manage this message request."
                 );
             }
+
+            // --------------------------------------------------
+            // STATUS CHECK
+            // --------------------------------------------------
 
             if (
                 String(request.status).toLowerCase() !==
@@ -253,6 +305,10 @@ router.post(
                 );
             }
 
+            // --------------------------------------------------
+            // REJECT REQUEST
+            // --------------------------------------------------
+
             await db.query(
                 `UPDATE message_requests
                  SET status = 'rejected'
@@ -260,15 +316,21 @@ router.post(
                 [requestId]
             );
 
+            // --------------------------------------------------
+            // NOTIFY ORIGINAL SENDER
+            // --------------------------------------------------
+
             await createNotification(
                 request.sender_id,
                 `${
                     req.session.userName ||
                     "The user"
-                } rejected your message request.`
+                } rejected your message request.`,
+                `/messages/${receiverId}`
             );
 
             res.redirect("/message-requests");
+
         } catch (error) {
             console.error(
                 "REJECT MESSAGE REQUEST ERROR:",

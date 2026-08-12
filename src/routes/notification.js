@@ -31,6 +31,7 @@ router.get(
                     notification_id,
                     message,
                     is_read,
+                    target_url,
                     created_at
                  FROM notifications
                  WHERE user_id = ?
@@ -38,7 +39,6 @@ router.get(
                 [userId]
             );
 
-            // Add a readable time to every notification
             const formattedNotifications =
                 notifications.map((notification) => ({
                     ...notification,
@@ -58,7 +58,9 @@ router.get(
             res.render("notifications", {
                 title: "Notifications",
                 notifications: formattedNotifications,
-                unreadCount: unreadResult.total
+                unreadCount: Number(
+                    unreadResult.total || 0
+                )
             });
         } catch (error) {
             console.error(
@@ -70,6 +72,92 @@ router.get(
                 error.sqlMessage ||
                 error.message ||
                 "Error loading notifications."
+            );
+        }
+    }
+);
+
+// --------------------------------------------------
+// OPEN NOTIFICATION
+// Marks notification as read and redirects user
+// to the content connected to the notification.
+// --------------------------------------------------
+
+router.get(
+    "/notifications/:id/open",
+    requireLogin,
+    async (req, res) => {
+        try {
+            const notificationId =
+                Number(req.params.id);
+
+            const userId =
+                Number(req.session.userId);
+
+            if (!notificationId) {
+                return res.redirect("/notifications");
+            }
+
+            // Find the notification and make sure
+            // it belongs to the logged-in user.
+            const [notifications] = await db.query(
+                `SELECT
+                    notification_id,
+                    target_url
+                 FROM notifications
+                 WHERE notification_id = ?
+                   AND user_id = ?
+                 LIMIT 1`,
+                [
+                    notificationId,
+                    userId
+                ]
+            );
+
+            if (notifications.length === 0) {
+                return res.status(404).send(
+                    "Notification not found."
+                );
+            }
+
+            const notification = notifications[0];
+
+            // Mark the notification as read.
+            await db.query(
+                `UPDATE notifications
+                 SET is_read = TRUE
+                 WHERE notification_id = ?
+                   AND user_id = ?`,
+                [
+                    notificationId,
+                    userId
+                ]
+            );
+
+            // If this notification does not have a
+            // destination, return to notifications.
+            if (!notification.target_url) {
+                return res.redirect("/notifications");
+            }
+
+            // Security check:
+            // Only allow internal GymBuddy URLs.
+            if (!notification.target_url.startsWith("/")) {
+                return res.redirect("/notifications");
+            }
+
+            res.redirect(notification.target_url);
+
+        } catch (error) {
+            console.error(
+                "OPEN NOTIFICATION ERROR:",
+                error
+            );
+
+            res.status(500).send(
+                error.sqlMessage ||
+                error.message ||
+                "Error opening notification."
             );
         }
     }
@@ -108,6 +196,7 @@ router.post(
             }
 
             res.redirect("/notifications");
+
         } catch (error) {
             console.error(
                 "MARK NOTIFICATION READ ERROR:",
@@ -144,6 +233,7 @@ router.post(
             );
 
             res.redirect("/notifications");
+
         } catch (error) {
             console.error(
                 "MARK ALL NOTIFICATIONS READ ERROR:",
@@ -191,6 +281,7 @@ router.post(
             }
 
             res.redirect("/notifications");
+
         } catch (error) {
             console.error(
                 "DELETE NOTIFICATION ERROR:",

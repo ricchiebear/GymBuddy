@@ -1,8 +1,13 @@
 doctype html
 
 html
+
     head
-        meta(charset="UTF-8")
+
+        meta(
+            charset="UTF-8"
+        )
+
         meta(
             name="viewport"
             content="width=device-width, initial-scale=1.0"
@@ -14,6 +19,7 @@ html
             rel="stylesheet"
             href="/css/style.css"
         )
+
 
     body
 
@@ -32,8 +38,12 @@ html
                 a.brand(
                     href="/"
                 )
-                    span.brand-icon 🏋️
-                    span.brand-name GymBuddy
+
+                    span.brand-icon
+                        | 🏋️
+
+                    span.brand-name
+                        | GymBuddy
 
 
                 //=================================================
@@ -45,8 +55,12 @@ html
                     a.nav-link(
                         href="/"
                     )
-                        span.nav-icon 🏠
-                        span Home
+
+                        span.nav-icon
+                            | 🏠
+
+                        span
+                            | Home
 
 
                     if isLoggedIn
@@ -54,36 +68,56 @@ html
                         a.nav-link(
                             href="/workouts"
                         )
-                            span.nav-icon 🏋️
-                            span Workouts
+
+                            span.nav-icon
+                                | 🏋️
+
+                            span
+                                | Workouts
 
 
                         a.nav-link(
                             href="/recommendations"
                         )
-                            span.nav-icon 🤝
-                            span Recommendations
+
+                            span.nav-icon
+                                | 🤝
+
+                            span
+                                | Recommendations
 
 
                         a.nav-link(
                             href="/ai-coach"
                         )
-                            span.nav-icon 🤖
-                            span AI Coach
+
+                            span.nav-icon
+                                | 🤖
+
+                            span
+                                | AI Coach
 
 
                         a.nav-link(
                             href="/messages"
                         )
-                            span.nav-icon 💬
-                            span Messages
+
+                            span.nav-icon
+                                | 💬
+
+                            span
+                                | Messages
 
 
                         a.nav-link(
                             href="/notifications"
                         )
-                            span.nav-icon 🔔
-                            span Notifications
+
+                            span.nav-icon
+                                | 🔔
+
+                            span
+                                | Notifications
 
 
                 //=================================================
@@ -97,25 +131,68 @@ html
                         a.profile-nav-link(
                             href="/profile"
                         )
-                            span.profile-nav-icon 👤
-                            span My Profile
+
+                            span.profile-nav-icon
+                                | 👤
+
+                            span
+                                | My Profile
 
 
                         a.logout-button(
                             href="/logout"
-                        ) Logout
+                        )
+                            | Logout
 
 
                     else
 
                         a.register-nav-link(
                             href="/register"
-                        ) Register
+                        )
+                            | Register
 
 
                         a.login-nav-link(
                             href="/login"
-                        ) Login
+                        )
+                            | Login
+
+
+        //=====================================================
+        // GLOBAL USER FEEDBACK
+        //=====================================================
+
+        if feedback
+
+            section.app-feedback
+
+                if feedback.type === "success"
+
+                    .app-feedback-icon.app-feedback-success-icon
+                        | ✓
+
+                else
+
+                    .app-feedback-icon.app-feedback-error-icon
+                        | !
+
+
+                .app-feedback-content
+
+                    if feedback.type === "success"
+
+                        strong
+                            | Success
+
+                    else
+
+                        strong
+                            | Something needs attention
+
+
+                    p
+                        = feedback.message
 
 
         //=====================================================
@@ -123,6 +200,7 @@ html
         //=====================================================
 
         main.site-main
+
             block content
 
 
@@ -137,8 +215,10 @@ html
                 p
                     | © 2026 GymBuddy
 
+
                 .footer-links
 
                     a(
                         href="/support"
-                    ) Help & Support
+                    )
+                        | Help & Support

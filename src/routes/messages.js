@@ -26,8 +26,6 @@ async function usersCanMessageDirectly(
     userOneId,
     userTwoId
 ) {
-    // Check whether one user created a workout
-    // that the other user joined as an accepted participant.
     const [sharedWorkoutRows] = await db.query(
         `SELECT w.workout_id
          FROM workouts w
@@ -56,8 +54,6 @@ async function usersCanMessageDirectly(
         return true;
     }
 
-    // Check whether a message request between
-    // the users was previously accepted.
     const [acceptedRequestRows] = await db.query(
         `SELECT request_id
          FROM message_requests
@@ -98,13 +94,6 @@ router.get(
                 req.session.userId
             );
 
-            /*
-             * Load every private message involving
-             * the logged-in user.
-             *
-             * The CASE expression identifies the
-             * other person in each conversation.
-             */
             const [messageRows] = await db.query(
                 `SELECT
                     m.message_id,
@@ -151,11 +140,6 @@ router.get(
                 ]
             );
 
-            /*
-             * The query returns every message.
-             * This Map keeps only the newest message
-             * for each conversation partner.
-             */
             const conversationMap = new Map();
 
             for (const message of messageRows) {
@@ -181,8 +165,6 @@ router.get(
                     conversationMap.values()
                 );
 
-            // Load users who can potentially
-            // be contacted.
             const [users] = await db.query(
                 `SELECT
                     user_id,
@@ -197,7 +179,6 @@ router.get(
                 [userId]
             );
 
-            // Count pending incoming message requests.
             const [[pendingResult]] =
                 await db.query(
                     `SELECT COUNT(*) AS total
@@ -288,11 +269,6 @@ router.get(
 
             let requestStatus = null;
 
-            /*
-             * If they cannot message directly,
-             * check whether a message request exists
-             * in either direction.
-             */
             if (!canMessage) {
                 const [requestRows] =
                     await db.query(
@@ -386,7 +362,6 @@ router.get(
                     })
                 );
 
-                // Mark incoming messages as read.
                 await db.query(
                     `UPDATE messages
                      SET is_read = TRUE
@@ -490,7 +465,10 @@ router.post(
                 req.session.userName ||
                 "Someone";
 
-            // Matched users can message directly.
+            // --------------------------------------------------
+            // DIRECT MESSAGE
+            // --------------------------------------------------
+
             if (canMessage) {
                 await db.query(
                     `INSERT INTO messages
@@ -510,7 +488,8 @@ router.post(
 
                 await createNotification(
                     receiverId,
-                    `${senderName} sent you a private message.`
+                    `${senderName} sent you a private message.`,
+                    `/messages/${senderId}`
                 );
 
                 return res.redirect(
@@ -518,11 +497,10 @@ router.post(
                 );
             }
 
-            /*
-             * The users are not matched.
-             * Check whether the sender already
-             * created a request.
-             */
+            // --------------------------------------------------
+            // CHECK EXISTING REQUEST
+            // --------------------------------------------------
+
             const [existingRequestRows] =
                 await db.query(
                     `SELECT
@@ -565,10 +543,10 @@ router.post(
                 }
             }
 
-            /*
-             * Check whether the other person
-             * already sent a pending request.
-             */
+            // --------------------------------------------------
+            // CHECK REVERSE REQUEST
+            // --------------------------------------------------
+
             const [reverseRequestRows] =
                 await db.query(
                     `SELECT request_id
@@ -592,7 +570,10 @@ router.post(
                 );
             }
 
-            // Create the first message request.
+            // --------------------------------------------------
+            // CREATE MESSAGE REQUEST
+            // --------------------------------------------------
+
             await db.query(
                 `INSERT INTO message_requests
                  (
@@ -611,10 +592,12 @@ router.post(
 
             await createNotification(
                 receiverId,
-                `${senderName} sent you a message request.`
+                `${senderName} sent you a message request.`,
+                "/message-requests"
             );
 
             res.redirect("/messages");
+
         } catch (error) {
             console.error(
                 "SEND PRIVATE MESSAGE ERROR:",
