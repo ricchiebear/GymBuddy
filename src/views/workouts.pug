@@ -4,7 +4,10 @@ block content
 
     main.workouts-page
 
+        // =====================================================
         // PAGE HEADER
+        // =====================================================
+
         section.workouts-header
 
             .workouts-header-content
@@ -24,16 +27,18 @@ block content
                 | + Create Workout
 
 
+        // =====================================================
         // FILTER SECTION
+        // =====================================================
+
         section.workout-filter-card
 
             .workout-filter-heading
 
-                div
-                    h2 Find a Workout
+                h2 Find a Workout
 
-                    p
-                        | Search by workout type, location or status.
+                p
+                    | Search by workout type, location or status.
 
 
             form.workout-filter-form(
@@ -52,7 +57,7 @@ block content
                         type="text"
                         id="type"
                         name="type"
-                        placeholder="e.g. Running, Gym, Football"
+                        placeholder="e.g. Running, Strength, Football"
                         value=filters && filters.type ? filters.type : ""
                     )
 
@@ -68,7 +73,7 @@ block content
                         type="text"
                         id="location"
                         name="location"
-                        placeholder="e.g. Hackney, London"
+                        placeholder="e.g. London, Hackney"
                         value=filters && filters.location ? filters.location : ""
                     )
 
@@ -115,20 +120,24 @@ block content
                     button.workout-search-button(
                         type="submit"
                     )
-                        | Search Workouts
+                        | Search
 
                     a.workout-clear-button(
                         href="/workouts"
                     )
-                        | Clear Filters
+                        | Clear
 
 
-        // WORKOUT RESULTS
+        // =====================================================
+        // RESULTS
+        // =====================================================
+
         section.workout-results-section
 
             .workout-results-header
 
                 div
+
                     p.workouts-eyebrow
                         | AVAILABLE SESSIONS
 
@@ -163,7 +172,7 @@ block content
                         a.workout-empty-secondary(
                             href="/workouts/create"
                         )
-                            | Create a Workout
+                            | Create Workout
 
             else
 
@@ -171,9 +180,21 @@ block content
 
                     each workout in workouts
 
+                        - const workoutStatus = String(workout.status || "").toLowerCase()
+                        - const startDate = workout.start_time ? new Date(workout.start_time) : null
+                        - const endDate = workout.end_time ? new Date(workout.end_time) : null
+                        - const createdDate = workout.created_at ? new Date(workout.created_at) : null
+                        - const formattedDate = startDate ? startDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "Not available"
+                        - const formattedStartTime = startDate ? startDate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "Not available"
+                        - const formattedEndTime = endDate ? endDate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : null
+                        - const formattedCreatedDate = createdDate ? createdDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : null
+
                         article.workout-discovery-card
 
-                            // WORKOUT IMAGE
+                            // =====================================
+                            // IMAGE
+                            // =====================================
+
                             .workout-card-image
 
                                 if workout.workout_image
@@ -194,20 +215,21 @@ block content
                                 if workout.status
 
                                     span.workout-status-badge(
-                                        class=`workout-status-${workout.status.toLowerCase()}`
+                                        class=`workout-status-${workoutStatus}`
                                     )
                                         = workout.status
 
 
-                            // WORKOUT INFORMATION
+                            // =====================================
+                            // BODY
+                            // =====================================
+
                             .workout-card-body
 
-                                .workout-card-top
+                                if workout.workout_type
 
-                                    if workout.workout_type
-
-                                        span.workout-type-badge
-                                            = workout.workout_type
+                                    span.workout-type-badge
+                                        = workout.workout_type
 
 
                                 h2.workout-card-title
@@ -215,6 +237,8 @@ block content
 
 
                                 .workout-card-details
+
+                                    // LOCATION
 
                                     .workout-card-detail
 
@@ -227,8 +251,10 @@ block content
                                                 | Location
 
                                             strong
-                                                = workout.location || "Location not specified"
+                                                = workout.location || "Not specified"
 
+
+                                    // DATE
 
                                     .workout-card-detail
 
@@ -240,16 +266,11 @@ block content
                                             small
                                                 | Date
 
-                                            if workout.date
+                                            strong
+                                                = formattedDate
 
-                                                strong
-                                                    = new Date(workout.date).toLocaleDateString("en-GB")
 
-                                            else
-
-                                                strong
-                                                    | Date not available
-
+                                    // TIME
 
                                     .workout-card-detail
 
@@ -261,19 +282,14 @@ block content
                                             small
                                                 | Time
 
-                                            if workout.start_time
+                                            strong
+                                                if formattedEndTime
+                                                    | #{formattedStartTime} – #{formattedEndTime}
+                                                else
+                                                    = formattedStartTime
 
-                                                strong
-                                                    | #{workout.start_time}
 
-                                                    if workout.end_time
-                                                        |  – #{workout.end_time}
-
-                                            else
-
-                                                strong
-                                                    | Time not available
-
+                                    // PARTICIPANTS
 
                                     .workout-card-detail
 
@@ -289,14 +305,19 @@ block content
                                                 = workout.participants_count || 0
 
 
-                                .workout-card-footer
+                            // =====================================
+                            // FOOTER
+                            // =====================================
 
-                                    if workout.created_at
+                            .workout-card-footer
 
-                                        small.workout-created-date
-                                            | Created #{new Date(workout.created_at).toLocaleDateString("en-GB")}
+                                if formattedCreatedDate
 
-                                    a.workout-details-button(
-                                        href=`/workouts/${workout.workout_id}`
-                                    )
-                                        | View Details →
+                                    small.workout-created-date
+                                        | Created #{formattedCreatedDate}
+
+
+                                a.workout-details-button(
+                                    href=`/workouts/${workout.workout_id}`
+                                )
+                                    | View Details →

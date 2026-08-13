@@ -1,22 +1,257 @@
-extends layout 
+extends layout
 
-block content 
-    h1 Contact Support
+block content
 
-    form(method="POST", action="/support")
-        label Name 
-        input(type="text", name="name", required)
+    main.contact-support-page
 
-        label Email 
-        input(type="email", name="email", required)
+        // =====================================================
+        // HERO
+        // =====================================================
 
-        label Issue Type 
-        select(name="issue_type", required)
-            option(value="Issue") Issue
-            option(value="Complaint") Complaint
-            option(value="Bug Report") Bug Report
+        section.contact-support-hero
 
-            label Message
-            textarea(name="message", required)          
+            .contact-support-hero-content
 
-        button(type="submit") Submit
+                .contact-support-hero-icon
+                    | 🎧
+
+                .contact-support-hero-copy
+
+                    p.contact-support-eyebrow
+                        | GYMBUDDY SUPPORT
+
+                    h1 How can we help?
+
+                    p
+                        | Tell us what's going on and our support
+                        | team will review your request.
+
+
+            a.contact-support-tickets-link(
+                href="/my-support-tickets"
+            )
+                | 🎫 My Support Tickets
+
+
+        // =====================================================
+        // SUPPORT CONTENT
+        // =====================================================
+
+        section.contact-support-layout
+
+
+            // =================================================
+            // LEFT - INFORMATION
+            // =================================================
+
+            aside.contact-support-info
+
+                p.contact-support-eyebrow
+                    | NEED HELP?
+
+                h2 We're here for you
+
+                p.contact-support-description
+                    | Having trouble with GymBuddy? Send us the
+                    | details and we'll help you get things sorted.
+
+
+                .contact-support-help-list
+
+                    .contact-support-help-item
+
+                        .contact-support-help-icon
+                            | 🛠️
+
+                        div
+                            strong Report a problem
+
+                            p
+                                | Let us know when something
+                                | isn't working correctly.
+
+
+                    .contact-support-help-item
+
+                        .contact-support-help-icon
+                            | 💬
+
+                        div
+                            strong Make a complaint
+
+                            p
+                                | Tell us about an experience
+                                | you'd like us to review.
+
+
+                    .contact-support-help-item
+
+                        .contact-support-help-icon
+                            | 🐞
+
+                        div
+                            strong Report a bug
+
+                            p
+                                | Found unexpected behaviour?
+                                | Help us improve GymBuddy.
+
+
+                .contact-support-note
+
+                    span
+                        | 💡
+
+                    p
+                        | Include as much detail as possible.
+                        | It helps us understand and investigate
+                        | your issue faster.
+
+
+            // =================================================
+            // RIGHT - SUPPORT FORM
+            // =================================================
+
+            section.contact-support-form-card
+
+                .contact-support-form-header
+
+                    p.contact-support-eyebrow
+                        | SUBMIT A REQUEST
+
+                    h2 Contact Support
+
+                    p
+                        | Complete the form below to create
+                        | a new support ticket.
+
+
+                form.contact-support-form(
+                    method="POST"
+                    action="/support"
+                )
+
+                    // =========================================
+                    // NAME
+                    // =========================================
+
+                    .contact-support-field
+
+                        label(
+                            for="support-name"
+                        )
+                            | Name
+
+                        input(
+                            type="text"
+                            id="support-name"
+                            name="name"
+                            placeholder="Enter your name"
+                            autocomplete="name"
+                            required
+                        )
+
+
+                    // =========================================
+                    // EMAIL
+                    // =========================================
+
+                    .contact-support-field
+
+                        label(
+                            for="support-email"
+                        )
+                            | Email Address
+
+                        input(
+                            type="email"
+                            id="support-email"
+                            name="email"
+                            placeholder="Enter your email address"
+                            autocomplete="email"
+                            required
+                        )
+
+
+                    // =========================================
+                    // ISSUE TYPE
+                    // =========================================
+
+                    .contact-support-field
+
+                        label(
+                            for="support-issue-type"
+                        )
+                            | Issue Type
+
+                        select(
+                            id="support-issue-type"
+                            name="issue_type"
+                            required
+                        )
+
+                            option(
+                                value=""
+                                selected
+                                disabled
+                            )
+                                | Select an issue type
+
+                            option(
+                                value="Issue"
+                            )
+                                | Issue
+
+                            option(
+                                value="Complaint"
+                            )
+                                | Complaint
+
+                            option(
+                                value="Bug Report"
+                            )
+                                | Bug Report
+
+
+                    // =========================================
+                    // MESSAGE
+                    // =========================================
+
+                    .contact-support-field
+
+                        .contact-support-label-row
+
+                            label(
+                                for="support-message"
+                            )
+                                | Message
+
+                            span
+                                | Required
+
+                        textarea(
+                            id="support-message"
+                            name="message"
+                            rows="7"
+                            placeholder="Describe what happened and include any useful details..."
+                            required
+                        )
+
+
+                    // =========================================
+                    // SUBMIT
+                    // =========================================
+
+                    .contact-support-form-footer
+
+                        p
+                            | Your request will appear in
+                            | My Support Tickets after submission.
+
+                        button.contact-support-submit(
+                            type="submit"
+                        )
+                            span
+                                | 🎫
+
+                            | Submit Support Request

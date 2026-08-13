@@ -2,69 +2,310 @@ extends layout
 
 block content
 
-    .page-container
+    main.edit-workout-page
 
-        h1 ✏️ Edit Workout
-        p Update your workout details below.
+        // =====================================================
+        // PAGE HEADER
+        // =====================================================
 
-        form(action=`/workouts/${workout.workout_id}/edit` method="POST" enctype="multipart/form-data")
+        section.edit-workout-header
 
-            .form-group
-                label(for="title") Workout Title
-                input(
-                    type="text"
-                    id="title"
-                    name="title"
-                    value=workout.title
-                    required
+            .edit-workout-header-content
+
+                p.edit-workout-eyebrow
+                    | WORKOUT MANAGEMENT
+
+                h1 Edit Workout
+
+                p
+                    | Update your workout details, schedule,
+                    | location or workout image.
+
+
+            a.edit-workout-back-button(
+                href="/my-workouts"
+            )
+                | ← Back to My Workouts
+
+
+        // =====================================================
+        // EDIT LAYOUT
+        // =====================================================
+
+        section.edit-workout-layout
+
+
+            // =================================================
+            // MAIN FORM
+            // =================================================
+
+            .edit-workout-form-card
+
+                .edit-workout-form-heading
+
+                    .edit-workout-heading-icon
+                        | ✏️
+
+                    div
+
+                        h2 Workout Details
+
+                        p
+                            | Make changes to your workout below.
+
+
+                form.edit-workout-form(
+                    action=`/workouts/${workout.workout_id}/edit`
+                    method="POST"
+                    enctype="multipart/form-data"
                 )
 
-            .form-group
-                label(for="workout_type") Workout Type
-                input(
-                    type="text"
-                    id="workout_type"
-                    name="workout_type"
-                    value=workout.workout_type
-                    required
-                )
 
-            .form-group
-                label(for="location") Location
-                input(
-                    type="text"
-                    id="location"
-                    name="location"
-                    value=workout.location
-                    required
-                )
+                    // =========================================
+                    // WORKOUT TITLE
+                    // =========================================
 
-            .form-group
-                label(for="start_time") Start Time
-                input(
-                    type="datetime-local"
-                    id="start_time"
-                    name="start_time"
-                    value=workout.start_time
-                )
+                    .edit-workout-field
 
-            .form-group
-                label(for="end_time") End Time
-                input(
-                    type="datetime-local"
-                    id="end_time"
-                    name="end_time"
-                    value=workout.end_time
-                )
+                        label(
+                            for="title"
+                        )
+                            | Workout Title
 
-            .form-group
-                label(for="workout_image") Workout Image
-                input(
-                    type="file"
-                    id="workout_image"
-                    name="workout_image"
-                )
+                        input(
+                            type="text"
+                            id="title"
+                            name="title"
+                            value=workout.title
+                            placeholder="e.g. Morning Strength Session"
+                            required
+                        )
 
-            .button-group
-                button.btn.btn-primary(type="submit") 💾 Save Changes
-                a.btn.btn-secondary(href="/my-workouts") Cancel
+
+                    // =========================================
+                    // WORKOUT TYPE + LOCATION
+                    // =========================================
+
+                    .edit-workout-field-row
+
+                        .edit-workout-field
+
+                            label(
+                                for="workout_type"
+                            )
+                                | Workout Type
+
+                            input(
+                                type="text"
+                                id="workout_type"
+                                name="workout_type"
+                                value=workout.workout_type
+                                placeholder="e.g. Strength Training"
+                                required
+                            )
+
+
+                        .edit-workout-field
+
+                            label(
+                                for="location"
+                            )
+                                | Location
+
+                            input(
+                                type="text"
+                                id="location"
+                                name="location"
+                                value=workout.location
+                                placeholder="e.g. PureGym Hackney"
+                                required
+                            )
+
+
+                    // =========================================
+                    // START + END TIME
+                    // =========================================
+
+                    .edit-workout-field-row
+
+                        .edit-workout-field
+
+                            label(
+                                for="start_time"
+                            )
+                                | Start Time
+
+                            input(
+                                type="datetime-local"
+                                id="start_time"
+                                name="start_time"
+                                value=workout.formatted_start_time
+                                required
+                            )
+
+
+                        .edit-workout-field
+
+                            label(
+                                for="end_time"
+                            )
+                                | End Time
+
+                            input(
+                                type="datetime-local"
+                                id="end_time"
+                                name="end_time"
+                                value=workout.formatted_end_time
+                                required
+                            )
+
+
+                    // =========================================
+                    // WORKOUT IMAGE
+                    // =========================================
+
+                    .edit-workout-field
+
+                        label(
+                            for="workout_image"
+                        )
+                            | Workout Image
+
+                        .edit-workout-file-upload
+
+                            input(
+                                type="file"
+                                id="workout_image"
+                                name="workout_image"
+                                accept="image/*"
+                            )
+
+                            .edit-workout-upload-help
+
+                                span
+                                    | 🖼️
+
+                                div
+
+                                    strong
+                                        | Choose a new workout image
+
+                                    p
+                                        | Leave this empty if you want to keep the current image.
+
+
+                    // =========================================
+                    // ACTIONS
+                    // =========================================
+
+                    .edit-workout-form-actions
+
+                        a.edit-workout-cancel-button(
+                            href="/my-workouts"
+                        )
+                            | Cancel
+
+
+                        button.edit-workout-save-button(
+                            type="submit"
+                        )
+                            | 💾 Save Changes
+
+
+            // =================================================
+            // CURRENT WORKOUT PREVIEW
+            // =================================================
+
+            aside.edit-workout-preview
+
+                .edit-workout-preview-heading
+
+                    p.edit-workout-eyebrow
+                        | CURRENT WORKOUT
+
+                    h2 Preview
+
+
+                .edit-workout-preview-card
+
+                    .edit-workout-preview-image
+
+                        if workout.workout_image
+
+                            img(
+                                src=workout.workout_image
+                                alt=workout.title
+                            )
+
+                        else
+
+                            .edit-workout-preview-placeholder
+                                | 🏋️
+
+
+                    .edit-workout-preview-content
+
+                        h3
+                            = workout.title
+
+
+                        .edit-workout-preview-item
+
+                            span
+                                | 🏋️
+
+                            div
+
+                                small
+                                    | Workout Type
+
+                                strong
+                                    = workout.workout_type || "Not set"
+
+
+                        .edit-workout-preview-item
+
+                            span
+                                | 📍
+
+                            div
+
+                                small
+                                    | Location
+
+                                strong
+                                    = workout.location || "Not set"
+
+
+                        .edit-workout-preview-item
+
+                            span
+                                | 🕒
+
+                            div
+
+                                small
+                                    | Starts
+
+                                strong
+                                    = workout.start_time ? new Date(workout.start_time).toLocaleString("en-GB") : "Not set"
+
+
+                        .edit-workout-preview-item
+
+                            span
+                                | ⏱️
+
+                            div
+
+                                small
+                                    | Ends
+
+                                strong
+                                    = workout.end_time ? new Date(workout.end_time).toLocaleString("en-GB") : "Not set"
+
+
+                    .edit-workout-preview-footer
+
+                        span
+                            | Changes will appear after you save the workout.

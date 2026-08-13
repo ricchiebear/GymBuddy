@@ -1,43 +1,167 @@
 extends layout
 
 block content
+
     main.message-requests-page
-        h1 Message Requests
+
+        // =====================================================
+        // PAGE HERO
+        // =====================================================
+
+        section.message-requests-hero
+
+            .message-requests-hero-copy
+
+                p.message-requests-eyebrow
+                    | PRIVATE MESSAGING
+
+                h1 Message Requests
+
+                p
+                    | Review new conversation requests before
+                    | allowing someone to message you directly.
+
+
+            .message-requests-summary
+
+                .message-requests-summary-icon
+                    | 💬
+
+                div
+
+                    small
+                        | Pending Requests
+
+                    strong
+                        if requests
+                            = requests.length
+                        else
+                            | 0
+
+
+        // =====================================================
+        // REQUESTS
+        // =====================================================
 
         if requests && requests.length > 0
-            each request in requests
-                article.message-request-card
-                    .request-sender
-                        if request.sender_profile_picture
-                            img(
-                                src=request.sender_profile_picture
-                                alt=`${request.sender_first_name} ${request.sender_last_name}`
-                                width="50"
-                                height="50"
+
+            section.message-request-list
+
+                each request in requests
+
+                    article.message-request-item
+
+                        // =========================================
+                        // SENDER
+                        // =========================================
+
+                        .message-request-sender
+
+                            .message-request-avatar
+
+                                if request.sender_profile_picture
+
+                                    img(
+                                        src=request.sender_profile_picture
+                                        alt=`${request.sender_first_name} ${request.sender_last_name}`
+                                    )
+
+                                else
+
+                                    span
+                                        | 👤
+
+
+                            .message-request-sender-info
+
+                                span.message-request-label
+                                    | MESSAGE REQUEST
+
+                                h2
+                                    | #{request.sender_first_name} #{request.sender_last_name}
+
+                                if request.created_at
+
+                                    small.message-request-time
+                                        = new Date(request.created_at).toLocaleString(
+                                            "en-GB",
+                                            {
+                                                day: "2-digit",
+                                                month: "short",
+                                                hour: "2-digit",
+                                                minute: "2-digit"
+                                            }
+                                        )
+
+
+                        // =========================================
+                        // MESSAGE PREVIEW
+                        // =========================================
+
+                        .message-request-preview
+
+                            .message-request-preview-icon
+                                | “ ”
+
+                            div
+
+                                small
+                                    | First message
+
+                                p
+                                    = request.first_message
+
+
+                        // =========================================
+                        // ACTIONS
+                        // =========================================
+
+                        .message-request-actions
+
+                            a.message-request-profile-button(
+                                href=`/users/${request.sender_id}`
                             )
-                        else
-                            span 👤
+                                | 👤 View Profile
 
-                        h2
-                            | #{request.sender_first_name} #{request.sender_last_name}
 
-                    p
-                        strong Message:
-                        |  #{request.first_message}
+                            form(
+                                method="POST"
+                                action=`/message-requests/${request.request_id}/reject`
+                                onsubmit="return confirm('Reject this message request?')"
+                            )
 
-                    small= new Date(request.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
+                                button.message-request-reject-button(
+                                    type="submit"
+                                )
+                                    | Reject
 
-                    .request-actions
-                        form(
-                            method="POST"
-                            action=`/message-requests/${request.request_id}/accept`
-                        )
-                            button(type="submit") Accept
 
-                        form(
-                            method="POST"
-                            action=`/message-requests/${request.request_id}/reject`
-                        )
-                            button(type="submit") Reject
+                            form(
+                                method="POST"
+                                action=`/message-requests/${request.request_id}/accept`
+                            )
+
+                                button.message-request-accept-button(
+                                    type="submit"
+                                )
+                                    | ✓ Accept
+
+
         else
-            p You have no pending message requests.
+
+            section.message-requests-empty
+
+                .message-requests-empty-icon
+                    | 💬
+
+                h2 No pending message requests
+
+                p
+                    | You're all caught up. New message requests
+                    | will appear here when another GymBuddy user
+                    | wants to start a private conversation.
+
+                a.primary-button(
+                    href="/messages"
+                )
+                    | Back to Messages

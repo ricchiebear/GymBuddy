@@ -1,57 +1,181 @@
 extends layout
 
 block content
-    main.workout-chat-page
-        h1 Workout Group Chat
 
-        if workout
-            h2= workout.title
+    main.workout-group-chat-page
 
-        form(
-            method="POST"
-            action=`/workouts/${workout.workout_id}/chat`
-        )
-            label(for="message") Message
+        // =====================================================
+        // CHAT SHELL
+        // =====================================================
 
-            textarea(
-                id="message"
-                name="message"
-                placeholder="Type your message..."
-                required
+        section.workout-group-chat-shell
+
+            // =================================================
+            // CHAT HEADER
+            // =================================================
+
+            header.workout-group-chat-header
+
+                .workout-group-chat-header-left
+
+                    a.workout-group-chat-back(
+                        href=`/workouts/${workout.workout_id}`
+                        aria-label="Back to workout"
+                    )
+                        | ←
+
+
+                    .workout-group-chat-icon
+                        | 🏋️
+
+
+                    .workout-group-chat-heading
+
+                        p.workout-group-chat-eyebrow
+                            | WORKOUT GROUP
+
+                        if workout
+
+                            h1
+                                = workout.title
+
+                        else
+
+                            h1 Workout Group Chat
+
+
+                        .workout-group-chat-status
+
+                            span.workout-group-chat-status-dot
+
+                            span
+                                | Group conversation
+
+
+                a.workout-group-chat-details-button(
+                    href=`/workouts/${workout.workout_id}`
+                )
+                    | View Workout
+
+
+            // =================================================
+            // MESSAGE AREA
+            // =================================================
+
+            section.workout-group-messages(
+                id="messages"
             )
 
-            button(type="submit") Send
+                if !messages || messages.length === 0
 
-        h2 Messages
+                    .workout-group-chat-empty
 
-        #messages
-            if !messages || messages.length === 0
-                p No messages yet. Start the conversation.
-            else
-                each msg in messages
-                    article.chat-message(
-                        class=Number(msg.sender_id) === Number(currentUserId) ? "sent-message" : "received-message"
-                    )
-                        .message-sender
-                            if msg.profile_picture
-                                img(
-                                    src=msg.profile_picture
-                                    alt=`${msg.first_name} ${msg.last_name}`
-                                    width="40"
-                                    height="40"
-                                )
-                            else
-                                span.sender-avatar 👤
+                        .workout-group-chat-empty-icon
+                            | 💬
 
-                            strong
-                                | #{msg.first_name} #{msg.last_name}
+                        h2 Start the conversation
 
-                        p.message-text= msg.message
+                        p
+                            | No messages have been sent yet.
+                            | Say hello and start planning the workout
+                            | with your GymBuddy group.
 
-                        small.message-time= msg.displayTime
 
-        br
+                else
 
-        a(
-            href=`/workouts/${workout.workout_id}`
-        ) ← Back to Workout
+                    each msg in messages
+
+                        // =====================================
+                        // CURRENT USER MESSAGE
+                        // =====================================
+
+                        if Number(msg.sender_id) === Number(currentUserId)
+
+                            .workout-group-message-row.workout-group-message-sent
+
+                                .workout-group-message-content
+
+                                    .workout-group-message-bubble.workout-group-sent-bubble
+
+                                        p.workout-group-message-text
+                                            = msg.message
+
+
+                                    if msg.displayTime
+
+                                        small.workout-group-message-time
+                                            = msg.displayTime
+
+
+                        // =====================================
+                        // OTHER USER MESSAGE
+                        // =====================================
+
+                        if Number(msg.sender_id) !== Number(currentUserId)
+
+                            .workout-group-message-row.workout-group-message-received
+
+                                .workout-group-sender-avatar
+
+                                    if msg.profile_picture
+
+                                        img(
+                                            src=msg.profile_picture
+                                            alt=`${msg.first_name} ${msg.last_name}`
+                                        )
+
+                                    else
+
+                                        span
+                                            | 👤
+
+
+                                .workout-group-message-content
+
+                                    strong.workout-group-sender-name
+                                        | #{msg.first_name} #{msg.last_name}
+
+
+                                    .workout-group-message-bubble.workout-group-received-bubble
+
+                                        p.workout-group-message-text
+                                            = msg.message
+
+
+                                    if msg.displayTime
+
+                                        small.workout-group-message-time
+                                            = msg.displayTime
+
+
+            // =================================================
+            // MESSAGE COMPOSER
+            // =================================================
+
+            footer.workout-group-composer
+
+                form.workout-group-chat-form(
+                    method="POST"
+                    action=`/workouts/${workout.workout_id}/chat`
+                )
+
+                    .workout-group-input-wrapper
+
+                        textarea.workout-group-chat-input(
+                            id="message"
+                            name="message"
+                            placeholder="Message the workout group..."
+                            rows="1"
+                            required
+                        )
+
+
+                        button.workout-group-send-button(
+                            type="submit"
+                            aria-label="Send message"
+                        )
+                            | ➤
+
+
+                p.workout-group-chat-note
+                    | Messages are visible to the workout creator and accepted participants.

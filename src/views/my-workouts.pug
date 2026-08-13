@@ -1,103 +1,290 @@
 extends layout
 
 block content
-    main.my-workouts-page
-        .page-header
-            div
-                h1 🏋️ My Workouts
-                p Manage the workouts you have created.
 
-            a.primary-button(href="/workouts/create") ➕ Create Workout
+    main.my-workouts-page
+
+        // =====================================================
+        // PAGE HERO
+        // =====================================================
+
+        section.my-workouts-hero
+
+            .my-workouts-hero-copy
+
+                p.my-workouts-eyebrow
+                    | WORKOUT MANAGEMENT
+
+                h1 My Workouts
+
+                p
+                    | Manage the sessions you've created,
+                    | track participation and keep each workout
+                    | up to date.
+
+
+            .my-workouts-hero-actions
+
+                .my-workouts-summary
+
+                    .my-workouts-summary-icon
+                        | 🏋️
+
+                    div
+
+                        small
+                            | Created Workouts
+
+                        strong
+                            if workouts
+                                = workouts.length
+                            else
+                                | 0
+
+
+                a.my-workouts-create-button(
+                    href="/workouts/create"
+                )
+                    | + Create Workout
+
+
+        // =====================================================
+        // WORKOUT CONTENT
+        // =====================================================
 
         if !workouts || workouts.length === 0
-            .empty-state
+
+            section.my-workouts-empty
+
+                .my-workouts-empty-icon
+                    | 🏋️
+
                 h2 No workouts created yet
-                p Create your first workout and start connecting with gym partners.
-                a.primary-button(href="/workouts/create") Create Workout
+
+                p
+                    | Create your first workout and start
+                    | connecting with other GymBuddy users.
+
+                a.primary-button(
+                    href="/workouts/create"
+                )
+                    | Create Workout
 
         else
-            .workout-grid
+
+            section.my-workouts-grid
+
                 each workout in workouts
+
                     - const workoutStatus = String(workout.status || "").toLowerCase()
 
-                    article.workout-card
-                        if workout.workout_image
-                            img.workout-card-image(
-                                src=workout.workout_image
-                                alt=workout.title
+                    article.my-workout-card
+
+                        // =========================================
+                        // WORKOUT IMAGE
+                        // =========================================
+
+                        .my-workout-image
+
+                            if workout.workout_image
+
+                                img(
+                                    src=workout.workout_image
+                                    alt=workout.title
+                                )
+
+                            else
+
+                                .my-workout-image-placeholder
+                                    | 🏋️
+
+
+                            span.my-workout-status(
+                                class=`my-workout-status-${workoutStatus}`
                             )
-                        else
-                            .workout-image-placeholder 🏋️
+                                = workout.status || "Unknown"
 
-                        .workout-card-content
-                            .workout-card-heading
-                                h2= workout.title
 
-                                span.workout-status(
-                                    class=`status-${workoutStatus}`
-                                )= workout.status
+                        // =========================================
+                        // WORKOUT CONTENT
+                        // =========================================
 
-                            p
-                                strong Type:
-                                |  #{workout.workout_type}
+                        .my-workout-content
 
-                            p
-                                strong Location:
-                                |  #{workout.location}
+                            .my-workout-topline
 
-                            p
-                                strong Starts:
-                                |  #{workout.start_time ? new Date(workout.start_time).toLocaleString("en-GB") : "Not set"}
+                                span.my-workout-type
+                                    = workout.workout_type || "Workout"
 
-                            p
-                                strong Ends:
-                                |  #{workout.end_time ? new Date(workout.end_time).toLocaleString("en-GB") : "Not set"}
+                                span.my-workout-participants
+                                    | 👥 #{workout.participants_count || 0}
 
-                            p
-                                strong Participants:
-                                |  #{workout.participants_count || 0}
 
-                            .workout-actions
-                                a.secondary-button(
+                            h2
+                                = workout.title
+
+
+                            // =====================================
+                            // WORKOUT INFORMATION
+                            // =====================================
+
+                            .my-workout-details
+
+                                .my-workout-detail
+
+                                    span
+                                        | 📍
+
+                                    div
+
+                                        small
+                                            | Location
+
+                                        strong
+                                            = workout.location || "Not set"
+
+
+                                .my-workout-detail
+
+                                    span
+                                        | 🕒
+
+                                    div
+
+                                        small
+                                            | Starts
+
+                                        if workout.start_time
+
+                                            strong
+                                                = new Date(workout.start_time).toLocaleString("en-GB")
+
+                                        else
+
+                                            strong
+                                                | Not set
+
+
+                                .my-workout-detail
+
+                                    span
+                                        | ⏱️
+
+                                    div
+
+                                        small
+                                            | Ends
+
+                                        if workout.end_time
+
+                                            strong
+                                                = new Date(workout.end_time).toLocaleString("en-GB")
+
+                                        else
+
+                                            strong
+                                                | Not set
+
+
+                            // =====================================
+                            // MAIN ACTIONS
+                            // =====================================
+
+                            .my-workout-primary-actions
+
+                                a.my-workout-view-button(
                                     href=`/workouts/${workout.workout_id}`
-                                ) View Details
+                                )
+                                    | View Details
 
-                                if workoutStatus === "open"
-                                    a.edit-button(
+
+                                a.my-workout-chat-button(
+                                    href=`/workouts/${workout.workout_id}/chat`
+                                )
+                                    | 💬 Group Chat
+
+
+                            // =====================================
+                            // OPEN WORKOUT MANAGEMENT
+                            // =====================================
+
+                            if workoutStatus === "open"
+
+                                .my-workout-management
+
+                                    a.my-workout-edit-button(
                                         href=`/workouts/${workout.workout_id}/edit`
-                                    ) Edit
+                                    )
+                                        | ✏️ Edit
+
 
                                     form(
                                         method="POST"
                                         action=`/workouts/${workout.workout_id}/complete`
                                         onsubmit="return confirm('Mark this workout as completed? This will update workout history and streaks for the owner and all accepted participants.')"
                                     )
-                                        button.complete-button(
+
+                                        button.my-workout-complete-button(
                                             type="submit"
-                                        ) Mark as Completed
+                                        )
+                                            | ✓ Complete
+
 
                                     form(
                                         method="POST"
                                         action=`/workouts/${workout.workout_id}/cancel`
                                         onsubmit="return confirm('Are you sure you want to cancel this workout? All accepted participants will be notified.')"
                                     )
-                                        button.cancel-button(
-                                            type="submit"
-                                        ) Cancel Workout
 
-                                else if workoutStatus === "cancelled"
-                                    p.workout-action-message
+                                        button.my-workout-cancel-button(
+                                            type="submit"
+                                        )
+                                            | Cancel
+
+
+                            // =====================================
+                            // CANCELLED WORKOUT
+                            // =====================================
+
+                            if workoutStatus === "cancelled"
+
+                                .my-workout-state-message
+
+                                    span
+                                        | 🚫
+
+                                    p
                                         | This workout has been cancelled.
 
-                                else if workoutStatus === "completed"
-                                    p.workout-action-message
+
+                            // =====================================
+                            // COMPLETED WORKOUT
+                            // =====================================
+
+                            if workoutStatus === "completed"
+
+                                .my-workout-state-message
+
+                                    span
+                                        | ✓
+
+                                    p
                                         | This workout has been completed.
+
+
+                            // =====================================
+                            // DELETE WORKOUT
+                            // =====================================
+
+                            .my-workout-danger-zone
 
                                 form(
                                     method="POST"
                                     action=`/workouts/${workout.workout_id}/delete`
                                     onsubmit="return confirm('Are you sure you want to permanently delete this workout? This action cannot be undone.')"
                                 )
-                                    button.delete-button(
+
+                                    button.my-workout-delete-button(
                                         type="submit"
-                                    ) Delete
+                                    )
+                                        | Delete Workout

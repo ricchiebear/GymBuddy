@@ -1,60 +1,266 @@
 extends layout
 
 block content
+
     main.report-workout-page
-        h1 Report Workout
 
-        if workout
-            h2= workout.title
+        // =====================================================
+        // PAGE HEADER
+        // =====================================================
 
-            p
-                strong Type:
-                |  #{workout.workout_type}
+        section.report-workout-hero
 
-            p
-                strong Location:
-                |  #{workout.location}
+            .report-workout-hero-copy
 
-        form(
-            method="POST"
-            action=`/workouts/${workout.workout_id}/report`
-        )
-            label(for="reason") Reason for report
+                p.report-workout-eyebrow
+                    | SAFETY & REPORTING
 
-            select(
-                id="reason"
-                name="reason"
-                required
-            )
-                option(value="") Select a reason
-                option(value="Spam or misleading content") Spam or misleading content
-                option(value="Unsafe activity") Unsafe activity
-                option(value="Harassment or abusive behaviour") Harassment or abusive behaviour
-                option(value="Inappropriate content") Inappropriate content
-                option(value="Fake workout or false information") Fake workout or false information
-                option(value="Scam or suspicious activity") Scam or suspicious activity
-                option(value="Dangerous location") Dangerous location
-                option(value="Duplicate workout") Duplicate workout
-                option(value="Other") Other
+                h1 Report Workout
 
-            br
-            br
+                p
+                    | Tell us what happened and why this workout
+                    | should be reviewed.
 
-            label(for="other_reason") Extra details
 
-            textarea(
-                id="other_reason"
-                name="other_reason"
-                placeholder="Add more details if needed..."
-            )
+            .report-workout-hero-icon
+                | 🚩
 
-            br
-            br
 
-            button(type="submit") Submit Report
+        // =====================================================
+        // REPORT LAYOUT
+        // =====================================================
 
-        br
+        section.report-workout-layout
 
-        a(
-            href=`/workouts/${workout.workout_id}`
-        ) Back to Workout
+            // =================================================
+            // WORKOUT SUMMARY
+            // =================================================
+
+            aside.report-workout-summary
+
+                .report-workout-summary-card
+
+                    .report-workout-summary-icon
+                        | 🏋️
+
+                    p.report-workout-eyebrow
+                        | WORKOUT BEING REPORTED
+
+                    if workout
+
+                        h2
+                            = workout.title
+
+                        .report-workout-summary-details
+
+                            .report-workout-summary-item
+
+                                span
+                                    | 🏋️
+
+                                div
+
+                                    small
+                                        | Type
+
+                                    strong
+                                        = workout.workout_type || "Not set"
+
+
+                            .report-workout-summary-item
+
+                                span
+                                    | 📍
+
+                                div
+
+                                    small
+                                        | Location
+
+                                    strong
+                                        = workout.location || "Not set"
+
+
+                        a.report-workout-view-link(
+                            href=`/workouts/${workout.workout_id}`
+                        )
+                            | View Workout →
+
+
+            // =================================================
+            // REPORT FORM
+            // =================================================
+
+            section.report-workout-form-card
+
+                .report-workout-form-heading
+
+                    .report-workout-heading-icon
+                        | 🛡️
+
+                    div
+
+                        h2 Submit Report
+
+                        p
+                            | Choose the issue that best describes
+                            | what you're reporting.
+
+
+                form.report-workout-form(
+                    method="POST"
+                    action=`/workouts/${workout.workout_id}/report`
+                )
+
+                    // =========================================
+                    // REASON
+                    // =========================================
+
+                    .report-workout-field
+
+                        label(
+                            for="reason"
+                        )
+                            | Reason for report
+
+                        select(
+                            id="reason"
+                            name="reason"
+                            required
+                        )
+
+                            option(
+                                value=""
+                                disabled
+                                selected
+                            )
+                                | Select a reason
+
+                            option(
+                                value="Spam or misleading content"
+                            )
+                                | Spam or misleading content
+
+                            option(
+                                value="Unsafe activity"
+                            )
+                                | Unsafe activity
+
+                            option(
+                                value="Harassment or abusive behaviour"
+                            )
+                                | Harassment or abusive behaviour
+
+                            option(
+                                value="Inappropriate content"
+                            )
+                                | Inappropriate content
+
+                            option(
+                                value="Fake workout or false information"
+                            )
+                                | Fake workout or false information
+
+                            option(
+                                value="Scam or suspicious activity"
+                            )
+                                | Scam or suspicious activity
+
+                            option(
+                                value="Dangerous location"
+                            )
+                                | Dangerous location
+
+                            option(
+                                value="Duplicate workout"
+                            )
+                                | Duplicate workout
+
+                            option(
+                                value="Other"
+                            )
+                                | Other
+
+
+                    // =========================================
+                    // EXTRA DETAILS
+                    // =========================================
+
+                    .report-workout-field
+
+                        label(
+                            for="other_reason"
+                        )
+                            | Extra details
+
+                        textarea(
+                            id="other_reason"
+                            name="other_reason"
+                            rows="7"
+                            maxlength="1000"
+                            placeholder="Add any details that would help explain the issue..."
+                        )
+
+                        small
+                            | Keep the description factual and relevant.
+
+
+                    // =========================================
+                    // ACTIONS
+                    // =========================================
+
+                    .report-workout-actions
+
+                        a.report-workout-cancel-button(
+                            href=`/workouts/${workout.workout_id}`
+                        )
+                            | Cancel
+
+                        button.report-workout-submit-button(
+                            type="submit"
+                        )
+                            | 🚩 Submit Report
+
+
+            // =================================================
+            // GUIDANCE
+            // =================================================
+
+            aside.report-workout-guidance
+
+                .report-workout-guidance-card
+
+                    .report-workout-guidance-icon
+                        | ℹ️
+
+                    h2 What happens next?
+
+                    p
+                        | Your report will be stored for review
+                        | as part of GymBuddy's moderation process.
+
+                    .report-workout-guidance-item
+
+                        span
+                            | ✓
+
+                        p
+                            | Pick the most accurate reason.
+
+
+                    .report-workout-guidance-item
+
+                        span
+                            | ✓
+
+                        p
+                            | Add extra context only when helpful.
+
+
+                    .report-workout-guidance-item
+
+                        span
+                            | ✓
+
+                        p
+                            | Avoid submitting duplicate reports.

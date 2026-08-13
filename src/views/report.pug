@@ -1,18 +1,198 @@
-extends layout 
+extends layout
 
-block content 
-    h1 Report Issue 
+block content
 
-    form(method="POST" action="/report")
-        input(type="hidden" name="workout_id" value=workout_id)
-        input(type="hidden" name="reported_user_id" value=reported_user_id)
+    main.report-page
 
-        label Report Type 
-        select(name"report_type" required)
-            option(value="Workout") Report Workout 
-            option(value="User") Report User 
+        // =====================================================
+        // PAGE HEADER
+        // =====================================================
 
-        label Reason 
-        textarea(name="reason" placeholder="Explain the issue..." Required)
+        section.report-hero
 
-        button(type="submit") Submit Report
+            .report-hero-content
+
+                p.report-eyebrow
+                    | SAFETY & REPORTING
+
+                h1 Report an Issue
+
+                p
+                    | Tell us what happened and we'll review
+                    | the report carefully.
+
+
+            .report-hero-icon
+                | 🚩
+
+
+        // =====================================================
+        // REPORT FORM
+        // =====================================================
+
+        section.report-layout
+
+            .report-form-card
+
+                .report-form-heading
+
+                    .report-heading-icon
+                        | 🛡️
+
+                    div
+
+                        h2 Submit a Report
+
+                        p
+                            | Provide enough detail so the issue
+                            | can be reviewed properly.
+
+
+                form.report-form(
+                    method="POST"
+                    action="/report"
+                )
+
+                    input(
+                        type="hidden"
+                        name="workout_id"
+                        value=workout_id
+                    )
+
+                    input(
+                        type="hidden"
+                        name="reported_user_id"
+                        value=reported_user_id
+                    )
+
+
+                    // =========================================
+                    // REPORT TYPE
+                    // =========================================
+
+                    .report-field
+
+                        label(
+                            for="report_type"
+                        )
+                            | What are you reporting?
+
+                        select(
+                            id="report_type"
+                            name="report_type"
+                            required
+                        )
+
+                            option(
+                                value=""
+                                disabled
+                                selected
+                            )
+                                | Select report type
+
+                            option(
+                                value="Workout"
+                            )
+                                | Report Workout
+
+                            option(
+                                value="User"
+                            )
+                                | Report User
+
+
+                    // =========================================
+                    // REASON
+                    // =========================================
+
+                    .report-field
+
+                        label(
+                            for="reason"
+                        )
+                            | Reason
+
+                        textarea(
+                            id="reason"
+                            name="reason"
+                            rows="7"
+                            maxlength="1000"
+                            placeholder="Explain what happened and why you're reporting it..."
+                            required
+                        )
+
+                        small
+                            | Include relevant details, but avoid sharing
+                            | unnecessary personal information.
+
+
+                    // =========================================
+                    // ACTIONS
+                    // =========================================
+
+                    .report-actions
+
+                        a.report-cancel-button(
+                            href="/workouts"
+                        )
+                            | Cancel
+
+                        button.report-submit-button(
+                            type="submit"
+                        )
+                            | 🚩 Submit Report
+
+
+            // =================================================
+            // REPORT GUIDANCE
+            // =================================================
+
+            aside.report-guidance
+
+                .report-guidance-card
+
+                    .report-guidance-icon
+                        | ℹ️
+
+                    h2 Before You Submit
+
+                    p
+                        | Reports are used to help review behaviour
+                        | or workout content that may be inappropriate.
+
+
+                    .report-guidance-item
+
+                        span
+                            | ✓
+
+                        p
+                            | Be specific about what happened.
+
+
+                    .report-guidance-item
+
+                        span
+                            | ✓
+
+                        p
+                            | Keep your explanation factual.
+
+
+                    .report-guidance-item
+
+                        span
+                            | ✓
+
+                        p
+                            | Submit one report per issue where possible.
+
+
+                .report-safety-note
+
+                    span
+                        | 🔒
+
+                    p
+                        | Your report is handled as part of GymBuddy's
+                        | safety and moderation process.

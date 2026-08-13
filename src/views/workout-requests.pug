@@ -1,36 +1,183 @@
 extends layout
 
 block content
-    h1 Workout Join Requests
 
-    if requests && requests.length > 0
-        each request in requests
-            .request-card
-                h3= request.title
+    main.workout-requests-page
+
+        // =====================================================
+        // PAGE HEADER
+        // =====================================================
+
+        section.workout-requests-hero
+
+            .workout-requests-hero-copy
+
+                p.workout-requests-eyebrow
+                    | WORKOUT REQUESTS
+
+                h1 Manage Join Requests
 
                 p
-                    strong Requested by:
-                    |  #{request.first_name} #{request.last_name}
+                    | Review users who want to join your workouts
+                    | and decide who you want to train with.
+
+
+            .workout-requests-summary
+
+                .workout-requests-summary-icon
+                    | 🤝
+
+                div
+
+                    small
+                        | Pending Requests
+
+                    strong
+                        if requests
+                            = requests.length
+                        else
+                            | 0
+
+
+        // =====================================================
+        // REQUEST LIST
+        // =====================================================
+
+        if requests && requests.length > 0
+
+            section.workout-request-list
+
+                each request in requests
+
+                    article.workout-request-card
+
+                        // =========================================
+                        // REQUESTER
+                        // =========================================
+
+                        .workout-request-user
+
+                            .workout-request-avatar
+
+                                if request.profile_picture
+
+                                    img(
+                                        src=request.profile_picture
+                                        alt=`${request.first_name} ${request.last_name}`
+                                    )
+
+                                else
+
+                                    span
+                                        | 👤
+
+
+                            .workout-request-user-info
+
+                                span.workout-request-label
+                                    | REQUESTED BY
+
+                                h2
+                                    | #{request.first_name} #{request.last_name}
+
+                                a.workout-request-profile-link(
+                                    href=`/users/${request.requester_id}`
+                                )
+                                    | View Profile →
+
+
+                        // =========================================
+                        // WORKOUT DETAILS
+                        // =========================================
+
+                        .workout-request-details
+
+                            .workout-request-workout
+
+                                span.workout-request-detail-icon
+                                    | 🏋️
+
+                                div
+
+                                    small
+                                        | Workout
+
+                                    strong
+                                        = request.title
+
+
+                            .workout-request-workout
+
+                                span.workout-request-detail-icon
+                                    | 🕒
+
+                                div
+
+                                    small
+                                        | Requested
+
+                                    strong
+                                        = new Date(request.created_at).toLocaleString("en-GB")
+
+
+                            .workout-request-workout
+
+                                span.workout-request-detail-icon
+                                    | ⏳
+
+                                div
+
+                                    small
+                                        | Status
+
+                                    span.workout-request-status
+                                        = request.status
+
+
+                        // =========================================
+                        // ACTIONS
+                        // =========================================
+
+                        .workout-request-actions
+
+                            form(
+                                method="POST"
+                                action=`/workout-requests/${request.request_id}/reject`
+                                onsubmit="return confirm('Reject this workout request?')"
+                            )
+
+                                button.workout-request-reject(
+                                    type="submit"
+                                )
+                                    | Reject
+
+
+                            form(
+                                method="POST"
+                                action=`/workout-requests/${request.request_id}/accept`
+                            )
+
+                                button.workout-request-accept(
+                                    type="submit"
+                                )
+                                    | ✓ Accept Request
+
+
+        else
+
+            section.workout-requests-empty
+
+                .workout-requests-empty-icon
+                    | 🤝
+
+                h2 No pending requests
 
                 p
-                    strong Status:
-                    |  #{request.status}
+                    | You don't have any workout join requests right now.
+                    | New requests will appear here when someone wants
+                    | to join one of your workouts.
 
-                p
-                    strong Requested on:
-                    |  #{new Date(request.created_at).toLocaleString()}
-
-                .request-actions
-                    form(
-                        method="POST"
-                        action=`/workout-requests/${request.request_id}/accept`
-                    )
-                        button(type="submit") Accept
-
-                    form(
-                        method="POST"
-                        action=`/workout-requests/${request.request_id}/reject`
-                    )
-                        button(type="submit") Reject
-    else
-        p You have no pending workout join requests at the moment. Check back later, Buddy!
+                a.primary-button(
+                    href="/my-workouts"
+                )
+                    | View My Workouts

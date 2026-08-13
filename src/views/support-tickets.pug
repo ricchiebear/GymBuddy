@@ -1,15 +1,271 @@
-extends layout 
+extends layout
 
-block content 
-    h1 Support Tickets 
+block content
 
-    if tickets.length === 0
-        p No support tickets yet.
-    else 
-        each ticket in tickets 
-            div 
-                h3 #{ticket.issue_type} - #{ticket.status}
-                p Name: #{ticket.name}
-                p Email: #{ticket.email}
-                p Message: #{ticket.message}
-                small Submitted: #{ticket.created_at}
+    main.support-tickets-page
+
+        // =====================================================
+        // HERO
+        // =====================================================
+
+        section.support-tickets-hero
+
+            .support-tickets-hero-content
+
+                .support-tickets-hero-icon
+                    | 🎧
+
+                .support-tickets-hero-copy
+
+                    p.support-tickets-eyebrow
+                        | HELP CENTRE
+
+                    h1 Support Tickets
+
+                    p
+                        | Track your support requests and check
+                        | the latest status of each issue.
+
+
+            a.support-tickets-new-button(
+                href="/support"
+            )
+                span +
+                | New Support Ticket
+
+
+        // =====================================================
+        // SUMMARY
+        // =====================================================
+
+        section.support-tickets-summary
+
+            .support-summary-card
+
+                .support-summary-icon
+                    | 🎫
+
+                .support-summary-content
+
+                    strong
+                        if tickets
+                            = tickets.length
+                        else
+                            | 0
+
+                    span
+                        | Total Tickets
+
+
+            .support-summary-card
+
+                .support-summary-icon
+                    | ⏳
+
+                .support-summary-content
+
+                    -
+                        const activeTickets = tickets
+                            ? tickets.filter(function(ticket) {
+                                const status = String(
+                                    ticket.status || ""
+                                ).toLowerCase()
+
+                                return status !== "resolved" &&
+                                       status !== "closed"
+                            }).length
+                            : 0
+
+                    strong
+                        = activeTickets
+
+                    span
+                        | Active
+
+
+            .support-summary-card
+
+                .support-summary-icon
+                    | ✓
+
+                .support-summary-content
+
+                    -
+                        const resolvedTickets = tickets
+                            ? tickets.filter(function(ticket) {
+                                const status = String(
+                                    ticket.status || ""
+                                ).toLowerCase()
+
+                                return status === "resolved" ||
+                                       status === "closed"
+                            }).length
+                            : 0
+
+                    strong
+                        = resolvedTickets
+
+                    span
+                        | Resolved
+
+
+        // =====================================================
+        // SECTION HEADING
+        // =====================================================
+
+        section.support-tickets-section-header
+
+            div
+
+                p.support-tickets-eyebrow
+                    | YOUR REQUESTS
+
+                h2 Ticket History
+
+                p
+                    | Review issues you've submitted to GymBuddy Support.
+
+
+        // =====================================================
+        // TICKET LIST
+        // =====================================================
+
+        if !tickets || tickets.length === 0
+
+            section.support-tickets-empty
+
+                .support-tickets-empty-icon
+                    | 🎫
+
+                p.support-tickets-eyebrow
+                    | NO TICKETS
+
+                h2 No support tickets yet
+
+                p
+                    | You haven't contacted GymBuddy Support yet.
+                    | If you need help with your account, workouts,
+                    | messages or another issue, we're here to help.
+
+                a.support-tickets-empty-button(
+                    href="/support"
+                )
+                    | Contact Support
+
+
+        else
+
+            section.support-tickets-list
+
+                each ticket in tickets
+
+                    -
+                        const ticketStatus = String(
+                            ticket.status || "pending"
+                        ).toLowerCase()
+
+                        const statusClass = ticketStatus
+                            .replace(/\s+/g, "-")
+                            .replace(/_/g, "-")
+
+
+                    article.support-ticket-list-card
+
+                        // =====================================
+                        // TICKET ICON
+                        // =====================================
+
+                        .support-ticket-list-icon
+
+                            if ticketStatus === "resolved" || ticketStatus === "closed"
+                                | ✓
+
+                            else if ticketStatus === "open"
+                                | 🎫
+
+                            else
+                                | ⏳
+
+
+                        // =====================================
+                        // MAIN INFORMATION
+                        // =====================================
+
+                        .support-ticket-list-content
+
+                            .support-ticket-list-top
+
+                                .support-ticket-title-area
+
+                                    span.support-ticket-number
+                                        | TICKET ##{ticket.ticket_id}
+
+                                    h3
+                                        = ticket.issue_type || "General Support"
+
+
+                                span.support-ticket-list-status(
+                                    class=`support-list-status-${statusClass}`
+                                )
+
+                                    if ticketStatus === "resolved"
+                                        | ✓ Resolved
+
+                                    else if ticketStatus === "closed"
+                                        | ✓ Closed
+
+                                    else if ticketStatus === "open"
+                                        | ● Open
+
+                                    else if ticketStatus === "in progress" || ticketStatus === "in_progress"
+                                        | ● In Progress
+
+                                    else
+                                        | ● #{ticket.status || "Pending"}
+
+
+                            // =================================
+                            // MESSAGE PREVIEW
+                            // =================================
+
+                            if ticket.message
+
+                                p.support-ticket-message-preview
+                                    = ticket.message
+
+
+                            // =================================
+                            // META INFORMATION
+                            // =================================
+
+                            .support-ticket-list-meta
+
+                                if ticket.created_at
+
+                                    span
+                                        | 📅 #{new Date(ticket.created_at).toLocaleDateString(
+                                            "en-GB",
+                                            {
+                                                day: "2-digit",
+                                                month: "short",
+                                                year: "numeric"
+                                            }
+                                        )}
+
+                                if ticket.email
+
+                                    span
+                                        | ✉️ #{ticket.email}
+
+
+                        // =====================================
+                        // ACTION
+                        // =====================================
+
+                        .support-ticket-list-action
+
+                            a.support-ticket-view-button(
+                                href=`/support-tickets/${ticket.ticket_id}`
+                            )
+                                | View Ticket
+                                span →

@@ -1,50 +1,242 @@
 extends layout
 
 block content
-    main.support-tickets-page
 
-        h1 My Support Tickets
+    main.my-support-tickets-page
 
-        a(href="/support") Submit New Support Ticket
+        // =====================================================
+        // PAGE HERO
+        // =====================================================
 
-        br
-        br
+        section.my-tickets-hero
+
+            .my-tickets-hero-content
+
+                .my-tickets-hero-icon
+                    | 🎫
+
+                .my-tickets-hero-text
+
+                    p.my-tickets-eyebrow
+                        | SUPPORT CENTRE
+
+                    h1 My Support Tickets
+
+                    p
+                        | Track your support requests and view
+                        | the details of issues you have reported.
+
+
+            .my-tickets-hero-actions
+
+                a.my-tickets-primary-button(
+                    href="/support"
+                )
+                    | + New Support Ticket
+
+
+        // =====================================================
+        // TICKET SUMMARY
+        // =====================================================
+
+        section.my-tickets-summary
+
+            .my-ticket-summary-card
+
+                .my-ticket-summary-icon
+                    | 🎫
+
+                .my-ticket-summary-content
+
+                    span.my-ticket-summary-number
+                        if tickets
+                            = tickets.length
+                        else
+                            | 0
+
+                    span.my-ticket-summary-label
+                        | Total Tickets
+
+
+            .my-ticket-summary-card
+
+                .my-ticket-summary-icon
+                    | ⏳
+
+                .my-ticket-summary-content
+
+                    span.my-ticket-summary-number
+                        if tickets
+                            - const openTickets = tickets.filter(function(ticket) { return String(ticket.status || "").toLowerCase() !== "resolved" && String(ticket.status || "").toLowerCase() !== "closed"; }).length
+                            = openTickets
+                        else
+                            | 0
+
+                    span.my-ticket-summary-label
+                        | Active Tickets
+
+
+            .my-ticket-summary-card
+
+                .my-ticket-summary-icon
+                    | ✓
+
+                .my-ticket-summary-content
+
+                    span.my-ticket-summary-number
+                        if tickets
+                            - const resolvedTickets = tickets.filter(function(ticket) { return String(ticket.status || "").toLowerCase() === "resolved" || String(ticket.status || "").toLowerCase() === "closed"; }).length
+                            = resolvedTickets
+                        else
+                            | 0
+
+                    span.my-ticket-summary-label
+                        | Resolved
+
+
+        // =====================================================
+        // SECTION HEADER
+        // =====================================================
+
+        section.my-tickets-section-header
+
+            .my-tickets-section-title
+
+                p.my-tickets-eyebrow
+                    | YOUR REQUESTS
+
+                h2 Support History
+
+                p
+                    | View the status and details of your
+                    | previous GymBuddy support requests.
+
+
+        // =====================================================
+        // TICKET LIST / EMPTY STATE
+        //
+        // IMPORTANT:
+        // Keep the else directly connected to this if.
+        // =====================================================
 
         if tickets && tickets.length > 0
 
-            each ticket in tickets
+            section.my-tickets-list
 
-                article.support-ticket-card
+                each ticket in tickets
 
-                    h2 Ticket ##{ticket.ticket_id}
+                    - const ticketStatus = String(ticket.status || "open").toLowerCase()
 
-                    p
-                        strong Issue:
-                        |  #{ticket.issue_type}
+                    article.my-ticket-card
 
-                    p
-                        strong Status:
-                        |  #{ticket.status}
+                        // =====================================
+                        // TICKET ICON
+                        // =====================================
 
-                    p
-                        strong Submitted:
-                        |  #{new Date(ticket.created_at).toLocaleString("en-GB")}
+                        .my-ticket-card-icon
 
-                    p
-                        strong Description:
+                            if ticketStatus === "resolved" || ticketStatus === "closed"
 
-                    p= ticket.message
+                                | ✓
 
-                    a(
-                        href=`/support-tickets/${ticket.ticket_id}`
-                    ) View Ticket
+                            else if ticketStatus === "pending"
 
-                    hr
+                                | ⏳
+
+                            else
+
+                                | 🎫
+
+
+                        // =====================================
+                        // TICKET INFORMATION
+                        // =====================================
+
+                        .my-ticket-card-content
+
+                            .my-ticket-card-heading
+
+                                .my-ticket-card-title
+
+                                    span.my-ticket-number
+                                        | Ticket ##{ticket.ticket_id}
+
+                                    h3
+                                        = ticket.issue_type || "Support Request"
+
+
+                                span.my-ticket-status(
+                                    class=`ticket-status-${ticketStatus}`
+                                )
+                                    = ticket.status || "Open"
+
+
+                            // =================================
+                            // MESSAGE PREVIEW
+                            // =================================
+
+                            if ticket.message
+
+                                p.my-ticket-preview
+                                    = ticket.message
+
+
+                            // =================================
+                            // TICKET META INFORMATION
+                            // =================================
+
+                            .my-ticket-meta
+
+                                if ticket.created_at
+
+                                    span.my-ticket-meta-item
+
+                                        span.my-ticket-meta-icon
+                                            | 🕒
+
+                                        span
+                                            | Submitted #{new Date(ticket.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+
+
+                                if ticket.email
+
+                                    span.my-ticket-meta-item
+
+                                        span.my-ticket-meta-icon
+                                            | ✉️
+
+                                        span
+                                            = ticket.email
+
+
+                        // =====================================
+                        // VIEW TICKET
+                        // =====================================
+
+                        .my-ticket-card-action
+
+                            a.my-ticket-view-button(
+                                href=`/my-support-tickets/${ticket.ticket_id}`
+                            )
+                                | View Details →
+
 
         else
 
-            p You have not submitted any support tickets yet.
+            section.my-tickets-empty
 
-        br
+                .my-tickets-empty-icon
+                    | 🎫
 
-        a(href="/support") Back to Help & Support
+                h2 No support tickets yet
+
+                p
+                    | You haven't submitted any support requests yet.
+                    | If you're experiencing a problem with GymBuddy,
+                    | you can contact support and we'll keep your
+                    | request here for you to track.
+
+                a.my-tickets-empty-button(
+                    href="/support"
+                )
+                    | Contact Support

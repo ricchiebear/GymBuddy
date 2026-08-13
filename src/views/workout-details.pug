@@ -1,83 +1,316 @@
 extends layout
 
 block content
-    main.workout-details-page
-        h1= workout.title
 
-        if workout.workout_image
-            img(
-                src=workout.workout_image
-                alt="Workout Image"
-                width="300"
-            )
+    main.workout-details-page
+
+        - const workoutStatus = String(workout.status || "").toLowerCase()
+
+        // =====================================================
+        // HERO
+        // =====================================================
+
+        section.workout-details-hero
+
+            .workout-details-hero-image
+
+                if workout.workout_image
+
+                    img(
+                        src=workout.workout_image
+                        alt=workout.title
+                    )
+
+                else
+
+                    .workout-details-image-placeholder
+                        | 🏋️
+
+
+                span.workout-details-status(
+                    class=`workout-details-status-${workoutStatus}`
+                )
+                    = workout.status || "Unknown"
+
+
+            .workout-details-hero-content
+
+                p.workout-details-eyebrow
+                    | WORKOUT SESSION
+
+                h1
+                    = workout.title
+
+                p.workout-details-subtitle
+                    | Hosted by #{workout.creator_first_name} #{workout.creator_last_name}
+
+
+                .workout-details-quick-info
+
+                    .workout-details-quick-item
+
+                        span
+                            | 🏋️
+
+                        div
+
+                            small
+                                | Type
+
+                            strong
+                                = workout.workout_type || "Not set"
+
+
+                    .workout-details-quick-item
+
+                        span
+                            | 📍
+
+                        div
+
+                            small
+                                | Location
+
+                            strong
+                                = workout.location || "Not set"
+
+
+                    .workout-details-quick-item
+
+                        span
+                            | 👥
+
+                        div
+
+                            small
+                                | Participants
+
+                            strong
+                                = workout.participants_count || 0
+
+
+                .workout-details-primary-actions
+
+                    if workoutStatus === "open"
+
+                        if loggedInUserId && Number(loggedInUserId) !== Number(workout.user_id)
+
+                            form(
+                                method="POST"
+                                action=`/workouts/${workout.workout_id}/join`
+                            )
+
+                                button.workout-details-join-button(
+                                    type="submit"
+                                )
+                                    | 🤝 Request to Join
+
+
+                    a.workout-details-calendar-button(
+                        href=`/workouts/${workout.workout_id}/calendar`
+                    )
+                        | 📅 Add to Calendar
+
+
+                    if loggedInUserId
+
+                        a.workout-details-chat-button(
+                            href=`/workouts/${workout.workout_id}/chat`
+                        )
+                            | 💬 Group Chat
+
+
+        // =====================================================
+        // SESSION DETAILS
+        // =====================================================
+
+        section.workout-details-section
+
+            .workout-details-section-heading
+
+                p.workout-details-eyebrow
+                    | SESSION INFORMATION
+
+                h2 Workout Details
+
+
+            .workout-details-info-grid
+
+                .workout-details-info-card
+
+                    span.workout-details-info-icon
+                        | 📅
+
+                    div
+
+                        small
+                            | Workout Date
+
+                        if workout.workout_date
+
+                            strong
+                                = new Date(workout.workout_date).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })
+
+                        else
+
+                            strong
+                                | Not set
+
+
+                .workout-details-info-card
+
+                    span.workout-details-info-icon
+                        | 🕒
+
+                    div
+
+                        small
+                            | Starts
+
+                        if workout.start_time
+
+                            strong
+                                = new Date(workout.start_time).toLocaleString("en-GB")
+
+                        else
+
+                            strong
+                                | Not set
+
+
+                .workout-details-info-card
+
+                    span.workout-details-info-icon
+                        | ⏱️
+
+                    div
+
+                        small
+                            | Ends
+
+                        if workout.end_time
+
+                            strong
+                                = new Date(workout.end_time).toLocaleString("en-GB")
+
+                        else
+
+                            strong
+                                | Not set
+
+
+                .workout-details-info-card
+
+                    span.workout-details-info-icon
+                        | 👤
+
+                    div
+
+                        small
+                            | Created By
+
+                        strong
+                            | #{workout.creator_first_name} #{workout.creator_last_name}
+
+
+                .workout-details-info-card
+
+                    span.workout-details-info-icon
+                        | 🗓️
+
+                    div
+
+                        small
+                            | Created On
+
+                        if workout.created_at
+
+                            strong
+                                = new Date(workout.created_at).toLocaleDateString("en-GB")
+
+                        else
+
+                            strong
+                                | Not available
+
+
+                .workout-details-info-card
+
+                    span.workout-details-info-icon
+                        | 🔄
+
+                    div
+
+                        small
+                            | Last Updated
+
+                        if workout.updated_at
+
+                            strong
+                                = new Date(workout.updated_at).toLocaleDateString("en-GB")
+
+                        else
+
+                            strong
+                                | No updates yet
+
+
+        // =====================================================
+        // LOCATION
+        // =====================================================
 
         if workout.location
-            iframe(
-                width="400"
-                height="300"
-                style="border:0"
-                loading="lazy"
-                allowfullscreen
-                src=`https://www.google.com/maps?q=${encodeURIComponent(workout.location)}&output=embed`
+
+            section.workout-details-section
+
+                .workout-details-section-heading
+
+                    p.workout-details-eyebrow
+                        | LOCATION
+
+                    h2 Where You'll Train
+
+                    p
+                        | Check the workout location before heading out.
+
+
+                .workout-details-map-card
+
+                    iframe(
+                        loading="lazy"
+                        allowfullscreen
+                        referrerpolicy="no-referrer-when-downgrade"
+                        src=`https://www.google.com/maps?q=${encodeURIComponent(workout.location)}&output=embed`
+                    )
+
+
+                    .workout-details-map-footer
+
+                        span
+                            | 📍
+
+                        div
+
+                            small
+                                | Workout Location
+
+                            strong
+                                = workout.location
+
+
+        // =====================================================
+        // SECONDARY ACTIONS
+        // =====================================================
+
+        section.workout-details-footer-actions
+
+            a.workout-details-back-button(
+                href="/workouts"
             )
+                | ← Back to Workouts
 
-        p
-            strong Type:
-            |  #{workout.workout_type}
 
-        p
-            strong Location:
-            |  #{workout.location}
-
-        p
-            strong Starts:
-            |  #{workout.start_time}
-
-        p
-            strong Ends:
-            |  #{workout.end_time}
-
-        p
-            strong Created by:
-            |  #{workout.creator_first_name} #{workout.creator_last_name}
-
-        p
-            strong Participants:
-            |  #{workout.participants_count || 0}
-
-        p
-            strong Date:
-            |  #{workout.workout_date ? workout.workout_date.toDateString() : "Not set"}
-
-        p
-            strong Created on:
-            |  #{workout.created_at ? workout.created_at.toDateString() : "Not available"}
-
-        if workout.updated_at
-            p
-                strong Updated on:
-                |  #{workout.updated_at.toDateString()}
-
-        p
-            strong Status:
-            |  #{workout.status}
-
-        .workout-detail-actions
-            a(
-                href=`/workouts/${workout.workout_id}/calendar`
-            ) 📅 Add to Calendar
-            form(
-                method="POST"
-                action=`/workouts/${workout.workout_id}/join`
-            )
-                button(type="submit") 🤝 Request to Join
-
-            a(href="/workouts") ← Back to Workouts
-
-            a(
-                href=`/workouts/${workout.workout_id}/chat`
-            ) 💬 Open Group Chat
-
-            a(
+            a.workout-details-report-button(
                 href=`/workouts/${workout.workout_id}/report`
-            ) 🚩 Report Workout
+            )
+                | 🚩 Report Workout

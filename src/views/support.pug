@@ -1,54 +1,285 @@
 extends layout
 
 block content
+
     main.support-page
-        h1 Help and Support
 
-        p Tell us what problem you are experiencing.
+        // =====================================================
+        // HERO
+        // =====================================================
 
-        form(method="POST" action="/support")
-            label(for="email") Contact Email
+        section.support-hero
 
-            input(
-                type="email"
-                id="email"
-                name="email"
-                value=email
-                required
+            .support-hero-content
+
+                .support-hero-icon
+                    | 🎧
+
+                .support-hero-copy
+
+                    p.support-eyebrow
+                        | HELP CENTRE
+
+                    h1 Help & Support
+
+                    p
+                        | Having trouble with GymBuddy?
+                        | Tell us what's happening and we'll
+                        | help you get it sorted.
+
+
+            a.support-view-tickets-button(
+                href="/my-support-tickets"
             )
+                | 🎫 View My Tickets
 
-            label(for="issue_type") Issue Type
 
-            select(
-                id="issue_type"
-                name="issue_type"
-                required
-            )
-                option(value="") Select an issue
-                option(value="Login Problem") Login Problem
-                option(value="Registration Problem") Registration Problem
-                option(value="Password Problem") Password Problem
-                option(value="Profile Problem") Profile Problem
-                option(value="Workout Creation Problem") Workout Creation Problem
-                option(value="Workout Request Problem") Workout Request Problem
-                option(value="Messaging Problem") Messaging Problem
-                option(value="Notification Problem") Notification Problem
-                option(value="Image Upload Problem") Image Upload Problem
-                option(value="Account Access Problem") Account Access Problem
-                option(value="Performance Problem") Performance Problem
-                option(value="Bug Report") Bug Report
-                option(value="Feature Request") Feature Request
-                option(value="Other") Other
+        // =====================================================
+        // SUPPORT LAYOUT
+        // =====================================================
 
-            label(for="message") Describe the Problem
+        section.support-layout
 
-            textarea(
-                id="message"
-                name="message"
-                placeholder="Explain what happened, what you expected, and any error message you saw."
-                required
-            )
 
-            button(type="submit") Submit Support Ticket
+            // =================================================
+            // SUPPORT INFORMATION
+            // =================================================
 
-        a(href="/my-support-tickets") View My Tickets
+            aside.support-help-panel
+
+                p.support-eyebrow
+                    | HOW WE CAN HELP
+
+                h2 What can you contact us about?
+
+                p.support-help-description
+                    | Send a support request for technical issues,
+                    | account problems or anything preventing you
+                    | from using GymBuddy properly.
+
+
+                .support-help-options
+
+                    .support-help-option
+
+                        .support-help-option-icon
+                            | 🔐
+
+                        div
+
+                            strong Account & Login
+
+                            p
+                                | Login, registration, password
+                                | and account access issues.
+
+
+                    .support-help-option
+
+                        .support-help-option-icon
+                            | 🏋️
+
+                        div
+
+                            strong Workouts
+
+                            p
+                                | Problems creating workouts,
+                                | joining sessions or requests.
+
+
+                    .support-help-option
+
+                        .support-help-option-icon
+                            | 💬
+
+                        div
+
+                            strong Messages & Notifications
+
+                            p
+                                | Messaging, chat or notification
+                                | problems.
+
+
+                    .support-help-option
+
+                        .support-help-option-icon
+                            | 🐞
+
+                        div
+
+                            strong Bugs & Performance
+
+                            p
+                                | Unexpected behaviour, errors or
+                                | performance problems.
+
+
+                .support-help-tip
+
+                    span
+                        | 💡
+
+                    p
+                        | Include any error message you saw and
+                        | explain what you expected to happen.
+
+
+            // =================================================
+            // SUPPORT FORM
+            // =================================================
+
+            section.support-form-card
+
+                .support-form-header
+
+                    p.support-eyebrow
+                        | CREATE A TICKET
+
+                    h2 Submit Support Request
+
+                    p
+                        | Complete the form and we'll create
+                        | a support ticket for your issue.
+
+
+                form.support-form(
+                    method="POST"
+                    action="/support"
+                )
+
+                    // =========================================
+                    // EMAIL
+                    // =========================================
+
+                    .support-field
+
+                        label(
+                            for="email"
+                        )
+                            | Contact Email
+
+                        input(
+                            type="email"
+                            id="email"
+                            name="email"
+                            value=email
+                            placeholder="Enter your email address"
+                            autocomplete="email"
+                            required
+                        )
+
+
+                    // =========================================
+                    // ISSUE TYPE
+                    // =========================================
+
+                    .support-field
+
+                        label(
+                            for="issue_type"
+                        )
+                            | Issue Type
+
+                        select(
+                            id="issue_type"
+                            name="issue_type"
+                            required
+                        )
+
+                            option(
+                                value=""
+                                disabled
+                                selected
+                            )
+                                | Select an issue
+
+                            option(value="Login Problem")
+                                | Login Problem
+
+                            option(value="Registration Problem")
+                                | Registration Problem
+
+                            option(value="Password Problem")
+                                | Password Problem
+
+                            option(value="Profile Problem")
+                                | Profile Problem
+
+                            option(value="Workout Creation Problem")
+                                | Workout Creation Problem
+
+                            option(value="Workout Request Problem")
+                                | Workout Request Problem
+
+                            option(value="Messaging Problem")
+                                | Messaging Problem
+
+                            option(value="Notification Problem")
+                                | Notification Problem
+
+                            option(value="Image Upload Problem")
+                                | Image Upload Problem
+
+                            option(value="Account Access Problem")
+                                | Account Access Problem
+
+                            option(value="Performance Problem")
+                                | Performance Problem
+
+                            option(value="Bug Report")
+                                | Bug Report
+
+                            option(value="Feature Request")
+                                | Feature Request
+
+                            option(value="Other")
+                                | Other
+
+
+                    // =========================================
+                    // MESSAGE
+                    // =========================================
+
+                    .support-field
+
+                        .support-field-label-row
+
+                            label(
+                                for="message"
+                            )
+                                | Describe the Problem
+
+                            span
+                                | Required
+
+                        textarea(
+                            id="message"
+                            name="message"
+                            rows="8"
+                            maxlength="1500"
+                            placeholder="Explain what happened, what you expected, and any error message you saw."
+                            required
+                        )
+
+                        small
+                            | The more context you provide, the easier
+                            | it will be to understand the problem.
+
+
+                    // =========================================
+                    // SUBMIT
+                    // =========================================
+
+                    .support-form-actions
+
+                        a.support-cancel-button(
+                            href="/"
+                        )
+                            | Cancel
+
+                        button.support-submit-button(
+                            type="submit"
+                        )
+                            | 🎫 Submit Support Ticket

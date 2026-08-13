@@ -1,31 +1,261 @@
 extends layout
 
 block content
+
     main.support-ticket-details-page
-        h1 Support Ticket ##{ticket.ticket_id}
 
-        p
-            strong Issue Type:
-            |  #{ticket.issue_type}
+        -
+            const ticketStatus = String(
+                ticket.status || "pending"
+            ).toLowerCase()
 
-        p
-            strong Status:
-            |  #{ticket.status}
+        // =====================================================
+        // BACK NAVIGATION
+        // =====================================================
 
-        p
-            strong Contact Email:
-            |  #{ticket.email}
+        .support-ticket-back-row
 
-        p
-            strong Submitted:
-            |  #{new Date(ticket.created_at).toLocaleString("en-GB")}
+            a.support-ticket-back-link(
+                href="/my-support-tickets"
+            )
+                span ←
+                |  Back to Support Tickets
 
-        h2 Problem Description
 
-        p= ticket.message
+        // =====================================================
+        // TICKET HERO
+        // =====================================================
 
-        a(href="/my-support-tickets") Back to My Support Tickets
+        section.support-ticket-details-hero
 
-        br
+            .support-ticket-details-hero-content
 
-        a(href="/support") Submit Another Ticket
+                .support-ticket-details-icon
+                    | 🎫
+
+                .support-ticket-details-heading
+
+                    p.support-ticket-eyebrow
+                        | SUPPORT CASE
+
+                    h1
+                        | Ticket ##{ticket.ticket_id}
+
+                    p
+                        | View the details and current status
+                        | of your support request.
+
+
+            span.support-ticket-status(
+                class=`support-status-${ticketStatus}`
+            )
+                if ticketStatus === "resolved"
+                    | ✓ Resolved
+
+                else if ticketStatus === "closed"
+                    | ✓ Closed
+
+                else if ticketStatus === "open"
+                    | ● Open
+
+                else if ticketStatus === "in progress" || ticketStatus === "in_progress"
+                    | ● In Progress
+
+                else
+                    | ● #{ticket.status || "Pending"}
+
+
+        // =====================================================
+        // TICKET OVERVIEW
+        // =====================================================
+
+        section.support-ticket-overview
+
+            // ISSUE TYPE
+
+            article.support-ticket-info-card
+
+                .support-ticket-info-icon
+                    | 🛠️
+
+                .support-ticket-info-content
+
+                    span.support-ticket-info-label
+                        | ISSUE TYPE
+
+                    strong
+                        = ticket.issue_type || "General Support"
+
+
+            // EMAIL
+
+            article.support-ticket-info-card
+
+                .support-ticket-info-icon
+                    | ✉️
+
+                .support-ticket-info-content
+
+                    span.support-ticket-info-label
+                        | CONTACT EMAIL
+
+                    strong.support-ticket-email
+                        = ticket.email
+
+
+            // SUBMITTED
+
+            article.support-ticket-info-card
+
+                .support-ticket-info-icon
+                    | 📅
+
+                .support-ticket-info-content
+
+                    span.support-ticket-info-label
+                        | SUBMITTED
+
+                    strong
+                        = new Date(
+                            ticket.created_at
+                        ).toLocaleDateString(
+                            "en-GB",
+                            {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric"
+                            }
+                        )
+
+                    small
+                        = new Date(
+                            ticket.created_at
+                        ).toLocaleTimeString(
+                            "en-GB",
+                            {
+                                hour: "2-digit",
+                                minute: "2-digit"
+                            }
+                        )
+
+
+        // =====================================================
+        // MAIN CONTENT
+        // =====================================================
+
+        section.support-ticket-details-layout
+
+            // =================================================
+            // PROBLEM DESCRIPTION
+            // =================================================
+
+            article.support-ticket-message-card
+
+                .support-ticket-message-heading
+
+                    .support-ticket-message-heading-left
+
+                        .support-ticket-message-icon
+                            | 💬
+
+                        div
+
+                            p.support-ticket-eyebrow
+                                | YOUR REQUEST
+
+                            h2 Problem Description
+
+
+                .support-ticket-message-body
+
+                    p
+                        = ticket.message
+
+
+            // =================================================
+            // TICKET PROGRESS
+            // =================================================
+
+            aside.support-ticket-progress-card
+
+                .support-ticket-progress-heading
+
+                    .support-ticket-progress-icon
+                        | 🎧
+
+                    div
+
+                        p.support-ticket-eyebrow
+                            | SUPPORT
+
+                        h2 Ticket Progress
+
+
+                .support-ticket-timeline
+
+                    .support-ticket-timeline-item.is-complete
+
+                        .support-ticket-timeline-marker
+                            | ✓
+
+                        .support-ticket-timeline-content
+
+                            strong Ticket submitted
+
+                            span
+                                | Your support request was received.
+
+
+                    if ticketStatus === "resolved" || ticketStatus === "closed"
+
+                        .support-ticket-timeline-item.is-complete
+
+                            .support-ticket-timeline-marker
+                                | ✓
+
+                            .support-ticket-timeline-content
+
+                                strong Review completed
+
+                                span
+                                    | This support case has been resolved.
+
+                    else
+
+                        .support-ticket-timeline-item.is-current
+
+                            .support-ticket-timeline-marker
+                                | •
+
+                            .support-ticket-timeline-content
+
+                                strong Under review
+
+                                span
+                                    | Your request is currently in the support process.
+
+
+        // =====================================================
+        // HELP / ACTION BAR
+        // =====================================================
+
+        section.support-ticket-action-bar
+
+            .support-ticket-action-copy
+
+                .support-ticket-action-icon
+                    | 💡
+
+                div
+
+                    strong Need help with something else?
+
+                    p
+                        | Create another support ticket and tell
+                        | us what's going on.
+
+
+            a.support-ticket-new-button(
+                href="/support"
+            )
+                | + New Support Ticket

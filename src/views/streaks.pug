@@ -1,10 +1,360 @@
-extends layout 
+extends layout
 
-block content 
-h1 My Workout Streak 
+block content
 
-if streak 
-    p Current Streak: #{streak.current_count} days
-    p Last Workout Date: #{streak.last_workout_date}
-else
-    p You don't have an active workout streak yet. Start working out to build your streak!
+    main.streak-page
+
+        // =====================================================
+        // STREAK HERO
+        // =====================================================
+
+        section.streak-hero
+
+            .streak-hero-content
+
+                p.streak-eyebrow
+                    | YOUR CONSISTENCY
+
+                h1 Workout Streak
+
+                p.streak-hero-description
+                    | Keep showing up, stay consistent and build
+                    | momentum one workout at a time.
+
+
+            .streak-hero-icon
+                | 🔥
+
+
+        // =====================================================
+        // ACTIVE STREAK
+        // =====================================================
+
+        if streak
+
+            -
+                const currentStreak = Number(
+                    streak.current_streak ||
+                    streak.current_count ||
+                    0
+                )
+
+                const longestStreak = Number(
+                    streak.longest_streak ||
+                    currentStreak ||
+                    0
+                )
+
+
+            section.streak-dashboard
+
+                // =============================================
+                // MAIN CURRENT STREAK
+                // =============================================
+
+                article.current-streak-card
+
+                    .current-streak-glow
+                        | 🔥
+
+                    p.current-streak-label
+                        | CURRENT STREAK
+
+                    .current-streak-number
+                        = currentStreak
+
+                    p.current-streak-unit
+                        if currentStreak === 1
+                            | day
+                        else
+                            | days
+
+                    if currentStreak === 0
+
+                        p.current-streak-message
+                            | Complete a workout to start your streak.
+
+                    else if currentStreak < 3
+
+                        p.current-streak-message
+                            | Nice start. Keep the momentum going.
+
+                    else if currentStreak < 7
+
+                        p.current-streak-message
+                            | You're building a solid routine.
+
+                    else
+
+                        p.current-streak-message
+                            | You're on fire. Keep showing up. 🔥
+
+
+                // =============================================
+                // STREAK INFORMATION
+                // =============================================
+
+                .streak-side-panel
+
+                    article.streak-stat-card
+
+                        .streak-stat-icon
+                            | 🏆
+
+                        .streak-stat-content
+
+                            span.streak-stat-label
+                                | LONGEST STREAK
+
+                            strong
+                                | #{longestStreak}
+
+                            span
+                                if longestStreak === 1
+                                    | day
+                                else
+                                    | days
+
+
+                    article.streak-stat-card
+
+                        .streak-stat-icon
+                            | 📅
+
+                        .streak-stat-content
+
+                            span.streak-stat-label
+                                | LAST WORKOUT
+
+                            if streak.last_workout_date
+
+                                strong.streak-date
+                                    = new Date(
+                                        streak.last_workout_date
+                                    ).toLocaleDateString(
+                                        "en-GB",
+                                        {
+                                            day: "2-digit",
+                                            month: "short",
+                                            year: "numeric"
+                                        }
+                                    )
+
+                            else
+
+                                strong.streak-date
+                                    | No workout yet
+
+
+            // =================================================
+            // PROGRESS
+            // =================================================
+
+            section.streak-progress-section
+
+                .streak-section-heading
+
+                    div
+
+                        p.streak-eyebrow
+                            | NEXT MILESTONE
+
+                        h2 Keep the momentum going
+
+                    span.streak-progress-icon
+                        | 🎯
+
+
+                .streak-progress-card
+
+                    if currentStreak < 3
+
+                        -
+                            const milestone = 3
+                            const progress =
+                                Math.min(
+                                    (currentStreak / milestone) * 100,
+                                    100
+                                )
+
+                        .streak-progress-top
+
+                            div
+                                strong 3 Day Streak
+                                span First milestone
+
+                            span
+                                | #{currentStreak} / #{milestone} days
+
+                        .streak-progress-track
+
+                            .streak-progress-fill(
+                                style=`width: ${progress}%`
+                            )
+
+                        p.streak-progress-message
+                            | #{milestone - currentStreak} more day#{milestone - currentStreak === 1 ? "" : "s"} to reach your next milestone.
+
+
+                    else if currentStreak < 7
+
+                        -
+                            const milestone = 7
+                            const progress =
+                                Math.min(
+                                    (currentStreak / milestone) * 100,
+                                    100
+                                )
+
+                        .streak-progress-top
+
+                            div
+                                strong 7 Day Streak
+                                span One full week
+
+                            span
+                                | #{currentStreak} / #{milestone} days
+
+                        .streak-progress-track
+
+                            .streak-progress-fill(
+                                style=`width: ${progress}%`
+                            )
+
+                        p.streak-progress-message
+                            | #{milestone - currentStreak} more day#{milestone - currentStreak === 1 ? "" : "s"} until your 7-day milestone.
+
+
+                    else if currentStreak < 14
+
+                        -
+                            const milestone = 14
+                            const progress =
+                                Math.min(
+                                    (currentStreak / milestone) * 100,
+                                    100
+                                )
+
+                        .streak-progress-top
+
+                            div
+                                strong 14 Day Streak
+                                span Two weeks strong
+
+                            span
+                                | #{currentStreak} / #{milestone} days
+
+                        .streak-progress-track
+
+                            .streak-progress-fill(
+                                style=`width: ${progress}%`
+                            )
+
+                        p.streak-progress-message
+                            | #{milestone - currentStreak} more day#{milestone - currentStreak === 1 ? "" : "s"} until your 14-day milestone.
+
+
+                    else if currentStreak < 30
+
+                        -
+                            const milestone = 30
+                            const progress =
+                                Math.min(
+                                    (currentStreak / milestone) * 100,
+                                    100
+                                )
+
+                        .streak-progress-top
+
+                            div
+                                strong 30 Day Streak
+                                span Serious consistency
+
+                            span
+                                | #{currentStreak} / #{milestone} days
+
+                        .streak-progress-track
+
+                            .streak-progress-fill(
+                                style=`width: ${progress}%`
+                            )
+
+                        p.streak-progress-message
+                            | #{milestone - currentStreak} more day#{milestone - currentStreak === 1 ? "" : "s"} until your 30-day milestone.
+
+
+                    else
+
+                        .streak-milestone-complete
+
+                            span
+                                | 🏆
+
+                            div
+
+                                strong 30+ Day Club
+
+                                p
+                                    | You've built an incredible workout streak.
+                                    | Keep protecting that consistency.
+
+
+            // =================================================
+            // MOTIVATION
+            // =================================================
+
+            section.streak-motivation-card
+
+                .streak-motivation-icon
+                    | 💪
+
+                .streak-motivation-content
+
+                    p.streak-eyebrow
+                        | GYM BUDDY TIP
+
+                    h2 Consistency beats perfection.
+
+                    p
+                        | You don't need every workout to be perfect.
+                        | Showing up consistently is what keeps your
+                        | streak and progress moving forward.
+
+                a.streak-workout-button(
+                    href="/workouts"
+                )
+                    | Find a Workout →
+
+
+        // =====================================================
+        // NO STREAK
+        // =====================================================
+
+        else
+
+            section.streak-empty-state
+
+                .streak-empty-fire
+                    | 🔥
+
+                p.streak-eyebrow
+                    | YOUR JOURNEY STARTS HERE
+
+                h2 Start your first workout streak
+
+                p
+                    | You don't have an active workout streak yet.
+                    | Complete a workout and your consistency journey
+                    | will begin.
+
+                .streak-empty-actions
+
+                    a.streak-primary-button(
+                        href="/workouts"
+                    )
+                        | 🏋️ Explore Workouts
+
+                    a.streak-secondary-button(
+                        href="/workouts/create"
+                    )
+                        | Create Workout

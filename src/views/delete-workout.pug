@@ -1,0 +1,205 @@
+extends layout
+
+block content
+
+    main.delete-workout-page
+
+        // =====================================================
+        // PAGE HEADER
+        // =====================================================
+
+        section.delete-workout-header
+
+            a.delete-workout-back(
+                href=`/workouts/${workout.workout_id}`
+            )
+                | ← Back to Workout
+
+
+        // =====================================================
+        // DELETE CONFIRMATION
+        // =====================================================
+
+        section.delete-workout-card
+
+            // =================================================
+            // WARNING ICON
+            // =================================================
+
+            .delete-workout-warning-icon
+                | ⚠️
+
+
+            // =================================================
+            // TITLE
+            // =================================================
+
+            .delete-workout-heading
+
+                p.delete-workout-eyebrow
+                    | DELETE WORKOUT
+
+                h1 Delete this workout?
+
+                p
+                    | You're about to permanently delete
+                    | this workout from GymBuddy.
+
+
+            // =================================================
+            // WORKOUT PREVIEW
+            // =================================================
+
+            .delete-workout-preview
+
+                if workout.workout_image
+
+                    img.delete-workout-image(
+                        src=workout.workout_image
+                        alt=workout.title
+                    )
+
+                else
+
+                    .delete-workout-image-placeholder
+                        | 🏋️
+
+
+                .delete-workout-info
+
+                    .delete-workout-title-row
+
+                        h2
+                            = workout.title
+
+                        if workout.status
+
+                            -
+                                const workoutStatus =
+                                    String(
+                                        workout.status
+                                    ).toLowerCase()
+
+                            span.delete-workout-status(
+                                class=`delete-status-${workoutStatus}`
+                            )
+                                = workout.status
+
+
+                    .delete-workout-meta
+
+                        if workout.workout_type
+
+                            .delete-workout-meta-item
+
+                                span
+                                    | 🏋️
+
+                                div
+
+                                    small
+                                        | WORKOUT TYPE
+
+                                    strong
+                                        = workout.workout_type
+
+
+                        if workout.location
+
+                            .delete-workout-meta-item
+
+                                span
+                                    | 📍
+
+                                div
+
+                                    small
+                                        | LOCATION
+
+                                    strong
+                                        = workout.location
+
+
+                        if workout.start_time
+
+                            .delete-workout-meta-item
+
+                                span
+                                    | 📅
+
+                                div
+
+                                    small
+                                        | STARTS
+
+                                    strong
+                                        = new Date(
+                                            workout.start_time
+                                        ).toLocaleString(
+                                            "en-GB"
+                                        )
+
+
+                        if workout.participants_count !== undefined
+
+                            .delete-workout-meta-item
+
+                                span
+                                    | 👥
+
+                                div
+
+                                    small
+                                        | PARTICIPANTS
+
+                                    strong
+                                        | #{workout.participants_count || 0}
+
+
+            // =================================================
+            // WARNING
+            // =================================================
+
+            .delete-workout-warning
+
+                .delete-workout-warning-symbol
+                    | ⚠️
+
+                .delete-workout-warning-content
+
+                    strong
+                        | This action cannot be undone
+
+                    p
+                        | Once deleted, this workout will no
+                        | longer be available through GymBuddy.
+                        | Make sure you really want to remove it
+                        | before continuing.
+
+
+            // =================================================
+            // ACTIONS
+            // =================================================
+
+            .delete-workout-actions
+
+                a.delete-workout-cancel(
+                    href=`/workouts/${workout.workout_id}`
+                )
+                    | Keep Workout
+
+
+                form(
+                    method="POST"
+                    action=`/workouts/${workout.workout_id}/delete`
+                    onsubmit="return confirm('Are you sure you want to permanently delete this workout? This action cannot be undone.')"
+                )
+
+                    button.delete-workout-confirm(
+                        type="submit"
+                    )
+
+                        span
+                            | 🗑️
+
+                        | Delete Workout
