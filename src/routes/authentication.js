@@ -8,42 +8,45 @@ const db = require("../config/database");
 
 const router = express.Router();
 
-
 // =====================================================
-// FEEDBACK MESSAGE HELPERS
+// FEEDBACK + FORM DATA HELPERS
 // =====================================================
 
-function setFeedback(
-    req,
-    type,
-    message,
-    formData = null
-) {
+function setFeedback(req, type, message) {
     req.session.feedback = {
         type,
-        message,
-        formData
+        message
     };
 }
 
-
-function consumeFeedback(req) {
-    const feedback =
-        req.session.feedback || null;
-
-    delete req.session.feedback;
-
-    return feedback;
+function setFormData(req, formData = {}) {
+    req.session.formData = formData;
 }
 
+function consumeFormData(req) {
+    const formData = req.session.formData || {};
+    delete req.session.formData;
+    return formData;
+}
+
+// =====================================================
+// ID VALIDATION
+// =====================================================
+
+function getNumericId(value) {
+    const id = Number(value);
+
+    return Number.isInteger(id) && id > 0
+        ? id
+        : null;
+}
 
 // =====================================================
 // LOGIN PROTECTION
 // =====================================================
 
 function requireLogin(req, res, next) {
-    if (!req.session.userId) {
-
+    if (!req.session?.userId) {
         setFeedback(
             req,
             "error",
@@ -56,6 +59,17 @@ function requireLogin(req, res, next) {
     next();
 }
 
+// =====================================================
+// LOGGED-OUT ONLY PROTECTION
+// =====================================================
+
+function requireLoggedOut(req, res, next) {
+    if (req.session?.userId) {
+        return res.redirect("/profile");
+    }
+
+    next();
+}
 
 // =====================================================
 // PROFILE PICTURE UPLOAD DIRECTORY
@@ -68,24 +82,17 @@ const uploadDirectory = path.join(
     "uploads"
 );
 
-
 if (!fs.existsSync(uploadDirectory)) {
-    fs.mkdirSync(
-        uploadDirectory,
-        {
-            recursive: true
-        }
-    );
+    fs.mkdirSync(uploadDirectory, {
+        recursive: true
+    });
 }
-
 
 // =====================================================
 // MULTER STORAGE
 // =====================================================
 
-const storage =
-    multer.memoryStorage();
-
+const storage = multer.memoryStorage();
 
 // =====================================================
 // ACCEPTED PROFILE PICTURE TYPES
@@ -99,7 +106,6 @@ const allowedMimeTypes = [
     "image/heif"
 ];
 
-
 const allowedExtensions = [
     ".jpg",
     ".jpeg",
@@ -109,107 +115,72 @@ const allowedExtensions = [
     ".heif"
 ];
 
-
 // =====================================================
 // MULTER CONFIGURATION
 // =====================================================
 
 const upload = multer({
-
     storage,
 
     limits: {
-        fileSize:
-            10 * 1024 * 1024
+        fileSize: 10 * 1024 * 1024
     },
 
-    fileFilter:
-        (req, file, cb) => {
+    fileFilter: (req, file, cb) => {
+        const extension = path
+            .extname(file.originalname)
+            .toLowerCase();
 
-            const extension =
-                path.extname(
-                    file.originalname
-                ).toLowerCase();
+        const allowedMime = allowedMimeTypes.includes(
+            file.mimetype
+        );
 
+        const allowedExtension = allowedExtensions.includes(
+            extension
+        );
 
-            const allowedMime =
-                allowedMimeTypes.includes(
-                    file.mimetype
-                );
-
-
-            const allowedExtension =
-                allowedExtensions.includes(
-                    extension
-                );
-
-
-            if (
-                allowedMime ||
-                allowedExtension
-            ) {
-                return cb(
-                    null,
-                    true
-                );
-            }
-
-
-            return cb(
-                new Error(
-                    "Please upload a JPG, PNG, WebP, HEIC or HEIF image."
-                )
-            );
+        if (allowedMime && allowedExtension) {
+            return cb(null, true);
         }
-});
 
+        return cb(
+            new Error(
+                "Please upload a valid JPG, PNG, WebP, HEIC or HEIF image."
+            )
+        );
+    }
+});
 
 // =====================================================
 // PROFILE PICTURE UPLOAD MIDDLEWARE
 // =====================================================
 
-function uploadProfilePicture(
-    req,
-    res,
-    next
-) {
-
-    upload.single(
-        "profile_picture"
-    )(
+function uploadProfilePicture(req, res, next) {
+    upload.single("profile_picture")(
         req,
         res,
         (error) => {
-
             if (!error) {
                 return next();
             }
 
-
             if (
-                error instanceof
-                    multer.MulterError &&
-                error.code ===
-                    "LIMIT_FILE_SIZE"
+                error instanceof multer.MulterError &&
+                error.code === "LIMIT_FILE_SIZE"
             ) {
-
                 setFeedback(
                     req,
                     "error",
                     "Your profile picture must be smaller than 10MB."
                 );
 
-                return res.redirect(
-                    "/profile/edit"
-                );
+                return res.redirect("/profile/edit");
             }
-
 
             console.error(
                 "PROFILE PICTURE UPLOAD ERROR:",
                 error
             );
-
 
             setFeedback(
                 req,
@@ -218,169 +189,95 @@ function uploadProfilePicture(
                 "We couldn't upload that profile picture."
             );
 
-
-            return res.redirect(
-                "/profile/edit"
-            );
+            return res.redirect("/profile/edit");
         }
     );
 }
-
 
 // =====================================================
 // SAVE PROFILE PICTURE
 // =====================================================
 
 async function saveProfilePicture(file) {
-
     if (!file) {
         return null;
     }
 
-
-    const originalExtension =
-        path.extname(
-            file.originalname
-        ).toLowerCase();
-
+    const originalExtension = path
+        .extname(file.originalname)
+        .toLowerCase();
 
     const isHeic =
-        originalExtension ===
-            ".heic" ||
-
-        originalExtension ===
-            ".heif" ||
-
-        file.mimetype ===
-            "image/heic" ||
-
-        file.mimetype ===
-            "image/heif";
-
+        originalExtension === ".heic" ||
+        originalExtension === ".heif" ||
+        file.mimetype === "image/heic" ||
+        file.mimetype === "image/heif";
 
     const uniqueBaseName =
-        Date.now() +
-        "-" +
-        Math.round(
-            Math.random() *
-            1e9
-        );
-
-
-    // =================================================
-    // HEIC / HEIF → JPEG
-    // =================================================
+        `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
 
     if (isHeic) {
+        const jpegBuffer = await heicConvert({
+            buffer: file.buffer,
+            format: "JPEG",
+            quality: 0.9
+        });
 
-        const jpegBuffer =
-            await heicConvert({
-                buffer:
-                    file.buffer,
-
-                format:
-                    "JPEG",
-
-                quality:
-                    0.9
-            });
-
-
-        const filename =
-            `${uniqueBaseName}.jpg`;
-
-
-        const destination =
-            path.join(
-                uploadDirectory,
-                filename
-            );
-
-
-        await fs.promises
-            .writeFile(
-                destination,
-                jpegBuffer
-            );
-
-
-        return {
-            filename,
-
-            filePath:
-                destination,
-
-            publicPath:
-                `/uploads/${filename}`
-        };
-    }
-
-
-    // =================================================
-    // JPG / PNG / WEBP
-    // =================================================
-
-    const safeExtension =
-        allowedExtensions.includes(
-            originalExtension
-        )
-            ? originalExtension
-            : ".jpg";
-
-
-    const filename =
-        `${uniqueBaseName}${safeExtension}`;
-
-
-    const destination =
-        path.join(
+        const filename = `${uniqueBaseName}.jpg`;
+        const destination = path.join(
             uploadDirectory,
             filename
         );
 
+        await fs.promises.writeFile(
+            destination,
+            jpegBuffer
+        );
+
+        return {
+            filename,
+            filePath: destination,
+            publicPath: `/uploads/${filename}`
+        };
+    }
+
+    const safeExtension = allowedExtensions.includes(
+        originalExtension
+    )
+        ? originalExtension
+        : ".jpg";
+
+    const filename = `${uniqueBaseName}${safeExtension}`;
+    const destination = path.join(
+        uploadDirectory,
+        filename
+    );
 
     await fs.promises.writeFile(
         destination,
         file.buffer
     );
 
-
     return {
         filename,
-
-        filePath:
-            destination,
-
-        publicPath:
-            `/uploads/${filename}`
+        filePath: destination,
+        publicPath: `/uploads/${filename}`
     };
 }
-
 
 // =====================================================
 // DELETE FILE SAFELY
 // =====================================================
 
-async function deleteFileSafely(
-    filePath
-) {
-
+async function deleteFileSafely(filePath) {
     if (!filePath) {
         return;
     }
 
-
     try {
-
-        await fs.promises.unlink(
-            filePath
-        );
-
+        await fs.promises.unlink(filePath);
     } catch (error) {
-
-        if (
-            error.code !== "ENOENT"
-        ) {
+        if (error.code !== "ENOENT") {
             console.error(
                 "Unable to remove file:",
                 error
@@ -389,6 +286,26 @@ async function deleteFileSafely(
     }
 }
 
+// =====================================================
+// GET LOCAL UPLOAD PATH FROM PUBLIC PATH
+// =====================================================
+
+function getUploadFilePath(publicPath) {
+    if (
+        !publicPath ||
+        typeof publicPath !== "string" ||
+        !publicPath.startsWith("/uploads/")
+    ) {
+        return null;
+    }
+
+    const filename = path.basename(publicPath);
+
+    return path.join(
+        uploadDirectory,
+        filename
+    );
+}
 
 // =====================================================
 // LOGIN PAGE
@@ -396,57 +313,16 @@ async function deleteFileSafely(
 
 router.get(
     "/login",
+    requireLoggedOut,
     (req, res) => {
+        const formData = consumeFormData(req);
 
-        if (
-            req.session.userId
-        ) {
-            return res.redirect(
-                "/profile"
-            );
-        }
-
-
-        let feedback =
-            consumeFeedback(req);
-
-
-        // Logout destroys the old session,
-        // so use a query parameter for this
-        // particular success message.
-        if (
-            req.query.loggedOut ===
-            "true"
-        ) {
-            feedback = {
-                type:
-                    "success",
-
-                message:
-                    "You have been logged out successfully."
-            };
-        }
-
-
-        const formData =
-            feedback?.formData ||
-            {};
-
-
-        return res.render(
-            "Login",
-            {
-                title:
-                    "Login",
-
-                feedback,
-
-                formData
-            }
-        );
+        return res.render("Login", {
+            title: "Login",
+            formData
+        });
     }
 );
-
 
 // =====================================================
 // REGISTER PAGE
@@ -454,40 +330,16 @@ router.get(
 
 router.get(
     "/register",
+    requireLoggedOut,
     (req, res) => {
+        const formData = consumeFormData(req);
 
-        if (
-            req.session.userId
-        ) {
-            return res.redirect(
-                "/profile"
-            );
-        }
-
-
-        const feedback =
-            consumeFeedback(req);
-
-
-        const formData =
-            feedback?.formData ||
-            {};
-
-
-        return res.render(
-            "Register",
-            {
-                title:
-                    "Register",
-
-                feedback,
-
-                formData
-            }
-        );
+        return res.render("Register", {
+            title: "Register",
+            formData
+        });
     }
 );
-
 
 // =====================================================
 // REGISTER USER
@@ -495,10 +347,9 @@ router.get(
 
 router.post(
     "/register",
+    requireLoggedOut,
     async (req, res) => {
-
         try {
-
             const {
                 first_name,
                 last_name,
@@ -509,31 +360,13 @@ router.post(
                 profile_bio
             } = req.body;
 
-
-            // Store only safe form information.
-            // Never put passwords into session feedback.
-
             const formData = {
-                first_name:
-                    first_name || "",
-
-                last_name:
-                    last_name || "",
-
-                email:
-                    email || "",
-
-                fitness_goal:
-                    fitness_goal || "",
-
-                profile_bio:
-                    profile_bio || ""
+                first_name: first_name?.trim() || "",
+                last_name: last_name?.trim() || "",
+                email: email?.trim() || "",
+                fitness_goal: fitness_goal || "",
+                profile_bio: profile_bio?.trim() || ""
             };
-
-
-            // =================================================
-            // REQUIRED FIELDS
-            // =================================================
 
             if (
                 !first_name?.trim() ||
@@ -543,148 +376,84 @@ router.post(
                 !confirm_password ||
                 !fitness_goal
             ) {
-
                 setFeedback(
                     req,
                     "error",
-                    "Please complete all required fields.",
-                    formData
+                    "Please complete all required fields."
                 );
 
-                return res.redirect(
-                    "/register"
-                );
+                setFormData(req, formData);
+
+                return res.redirect("/register");
             }
 
+            const cleanEmail = email
+                .trim()
+                .toLowerCase();
 
-            // =================================================
-            // CLEAN EMAIL
-            // =================================================
-
-            const cleanEmail =
-                email
-                    .trim()
-                    .toLowerCase();
-
-
-            // =================================================
-            // EMAIL VALIDATION
-            // =================================================
-
-            if (
-                !cleanEmail.endsWith(
-                    "@buddy.co.uk"
-                )
-            ) {
-
+            if (!cleanEmail.endsWith("@buddy.co.uk")) {
                 setFeedback(
                     req,
                     "error",
-                    "Your email must end with @buddy.co.uk.",
-                    formData
+                    "Your email must end with @buddy.co.uk."
                 );
 
-                return res.redirect(
-                    "/register"
-                );
+                setFormData(req, formData);
+
+                return res.redirect("/register");
             }
 
-
-            // =================================================
-            // PASSWORD MATCH
-            // =================================================
-
-            if (
-                password !==
-                confirm_password
-            ) {
-
+            if (password !== confirm_password) {
                 setFeedback(
                     req,
                     "error",
-                    "Your passwords do not match. Please try again.",
-                    formData
+                    "Your passwords do not match. Please try again."
                 );
 
-                return res.redirect(
-                    "/register"
-                );
+                setFormData(req, formData);
+
+                return res.redirect("/register");
             }
-
-
-            // =================================================
-            // PASSWORD STRENGTH
-            // =================================================
 
             const passwordRegex =
                 /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 
-
-            if (
-                !passwordRegex.test(
-                    password
-                )
-            ) {
-
+            if (!passwordRegex.test(password)) {
                 setFeedback(
                     req,
                     "error",
-                    "Your password must contain at least 8 characters, including an uppercase letter, lowercase letter and number.",
-                    formData
+                    "Your password must contain at least 8 characters, including an uppercase letter, lowercase letter and number."
                 );
 
-                return res.redirect(
-                    "/register"
-                );
+                setFormData(req, formData);
+
+                return res.redirect("/register");
             }
 
+            const [existingUsers] = await db.query(
+                `SELECT user_id
+                 FROM users
+                 WHERE email = ?
+                 LIMIT 1`,
+                [cleanEmail]
+            );
 
-            // =================================================
-            // DUPLICATE EMAIL CHECK
-            // =================================================
-
-            const [existingUsers] =
-                await db.query(
-                    `SELECT user_id
-                     FROM users
-                     WHERE email = ?
-                     LIMIT 1`,
-                    [cleanEmail]
-                );
-
-
-            if (
-                existingUsers.length >
-                0
-            ) {
-
+            if (existingUsers.length > 0) {
                 setFeedback(
                     req,
                     "error",
-                    "An account already exists with this email. Try logging in instead.",
-                    formData
+                    "An account already exists with this email. Try logging in instead."
                 );
 
-                return res.redirect(
-                    "/register"
-                );
+                setFormData(req, formData);
+
+                return res.redirect("/register");
             }
 
-
-            // =================================================
-            // PASSWORD HASH
-            // =================================================
-
-            const hashedPassword =
-                await bcrypt.hash(
-                    password,
-                    10
-                );
-
-
-            // =================================================
-            // CREATE USER
-            // =================================================
+            const hashedPassword = await bcrypt.hash(
+                password,
+                10
+            );
 
             await db.query(
                 `INSERT INTO users
@@ -699,25 +468,13 @@ router.post(
                  VALUES (?, ?, ?, ?, ?, ?)`,
                 [
                     first_name.trim(),
-
                     last_name.trim(),
-
                     cleanEmail,
-
                     hashedPassword,
-
                     fitness_goal,
-
-                    profile_bio
-                        ?.trim() ||
-                        null
+                    profile_bio?.trim() || null
                 ]
             );
-
-
-            // =================================================
-            // SUCCESS
-            // =================================================
 
             setFeedback(
                 req,
@@ -725,35 +482,22 @@ router.post(
                 "Your GymBuddy account has been created successfully. You can now log in."
             );
 
-
-            return res.redirect(
-                "/login"
-            );
-
+            return res.redirect("/login");
         } catch (error) {
-
             console.error(
                 "REGISTRATION ERROR:",
                 error
             );
 
-
-            if (
-                error.code ===
-                "ER_DUP_ENTRY"
-            ) {
-
+            if (error.code === "ER_DUP_ENTRY") {
                 setFeedback(
                     req,
                     "error",
                     "An account already exists with this email."
                 );
 
-                return res.redirect(
-                    "/register"
-                );
+                return res.redirect("/register");
             }
-
 
             setFeedback(
                 req,
@@ -761,14 +505,10 @@ router.post(
                 "Something went wrong while creating your account. Please try again."
             );
 
-
-            return res.redirect(
-                "/register"
-            );
+            return res.redirect("/register");
         }
     }
 );
-
 
 // =====================================================
 // LOGIN USER
@@ -776,142 +516,110 @@ router.post(
 
 router.post(
     "/login",
+    requireLoggedOut,
     async (req, res) => {
-
         try {
-
             const {
                 email,
                 password
             } = req.body;
 
-
             const formData = {
-                email:
-                    email || ""
+                email: email?.trim() || ""
             };
-
-
-            // =================================================
-            // REQUIRED FIELDS
-            // =================================================
 
             if (
                 !email?.trim() ||
                 !password
             ) {
-
                 setFeedback(
                     req,
                     "error",
-                    "Please enter your email and password.",
-                    formData
+                    "Please enter your email and password."
                 );
 
-                return res.redirect(
-                    "/login"
-                );
+                setFormData(req, formData);
+
+                return res.redirect("/login");
             }
 
+            const cleanEmail = email
+                .trim()
+                .toLowerCase();
 
-            const cleanEmail =
-                email
-                    .trim()
-                    .toLowerCase();
-
-
-            // =================================================
-            // FIND USER
-            // =================================================
-
-            const [users] =
-                await db.query(
-                    `SELECT *
-                     FROM users
-                     WHERE email = ?
-                     LIMIT 1`,
-                    [cleanEmail]
-                );
-
-
-            if (
-                users.length === 0
-            ) {
-
-                setFeedback(
-                    req,
-                    "error",
-                    "Incorrect email or password.",
-                    formData
-                );
-
-                return res.redirect(
-                    "/login"
-                );
-            }
-
-
-            const user =
-                users[0];
-
-
-            // =================================================
-            // PASSWORD CHECK
-            // =================================================
-
-            const validPassword =
-                await bcrypt.compare(
-                    password,
-                    user.password
-                );
-
-
-            if (
-                !validPassword
-            ) {
-
-                setFeedback(
-                    req,
-                    "error",
-                    "Incorrect email or password.",
-                    formData
-                );
-
-                return res.redirect(
-                    "/login"
-                );
-            }
-
-
-            // =================================================
-            // CREATE SESSION
-            // =================================================
-
-            req.session.userId =
-                user.user_id;
-
-
-            req.session.userName =
-                `${user.first_name} ${user.last_name}`;
-
-
-            setFeedback(
-                req,
-                "success",
-                `Welcome back, ${user.first_name}!`
+            const [users] = await db.query(
+                `SELECT
+                    user_id,
+                    first_name,
+                    last_name,
+                    password
+                 FROM users
+                 WHERE email = ?
+                 LIMIT 1`,
+                [cleanEmail]
             );
 
+            if (users.length === 0) {
+                setFeedback(
+                    req,
+                    "error",
+                    "Incorrect email or password."
+                );
 
-            req.session.save(
-                (error) => {
+                setFormData(req, formData);
 
-                    if (error) {
+                return res.redirect("/login");
+            }
 
+            const user = users[0];
+
+            const validPassword = await bcrypt.compare(
+                password,
+                user.password
+            );
+
+            if (!validPassword) {
+                setFeedback(
+                    req,
+                    "error",
+                    "Incorrect email or password."
+                );
+
+                setFormData(req, formData);
+
+                return res.redirect("/login");
+            }
+
+            req.session.regenerate((regenerateError) => {
+                if (regenerateError) {
+                    console.error(
+                        "SESSION REGENERATION ERROR:",
+                        regenerateError
+                    );
+
+                    return res
+                        .status(500)
+                        .send(
+                            "Unable to start your login session."
+                        );
+                }
+
+                req.session.userId = user.user_id;
+                req.session.userName =
+                    `${user.first_name} ${user.last_name}`;
+
+                setFeedback(
+                    req,
+                    "success",
+                    `Welcome back, ${user.first_name}!`
+                );
+
+                req.session.save((saveError) => {
+                    if (saveError) {
                         console.error(
                             "SESSION SAVE ERROR:",
-                            error
+                            saveError
                         );
-
 
                         return res
                             .status(500)
@@ -920,20 +628,14 @@ router.post(
                             );
                     }
 
-
-                    return res.redirect(
-                        "/profile"
-                    );
-                }
-            );
-
+                    return res.redirect("/profile");
+                });
+            });
         } catch (error) {
-
             console.error(
                 "LOGIN ERROR:",
                 error
             );
-
 
             setFeedback(
                 req,
@@ -941,14 +643,10 @@ router.post(
                 "Something went wrong while logging you in. Please try again."
             );
 
-
-            return res.redirect(
-                "/login"
-            );
+            return res.redirect("/login");
         }
     }
 );
-
 
 // =====================================================
 // PROFILE DASHBOARD
@@ -958,159 +656,112 @@ router.get(
     "/profile",
     requireLogin,
     async (req, res) => {
-
         try {
+            const userId = getNumericId(
+                req.session.userId
+            );
 
-            const userId =
-                req.session.userId;
-
-
-            const [users] =
-                await db.query(
-                    `SELECT
-                        user_id,
-                        first_name,
-                        last_name,
-                        email,
-                        fitness_goal,
-                        profile_bio,
-                        profile_picture,
-                        created_at
-                     FROM users
-                     WHERE user_id = ?
-                     LIMIT 1`,
-                    [userId]
-                );
-
-
-            if (
-                users.length === 0
-            ) {
-
-                req.session.destroy(
-                    () => {}
-                );
-
-
-                return res.redirect(
-                    "/login"
-                );
+            if (!userId) {
+                req.session.destroy(() => {});
+                return res.redirect("/login");
             }
 
+            const [users] = await db.query(
+                `SELECT
+                    user_id,
+                    first_name,
+                    last_name,
+                    email,
+                    fitness_goal,
+                    profile_bio,
+                    profile_picture,
+                    created_at
+                 FROM users
+                 WHERE user_id = ?
+                 LIMIT 1`,
+                [userId]
+            );
 
-            const user =
-                users[0];
+            if (users.length === 0) {
+                req.session.destroy(() => {});
+                return res.redirect("/login");
+            }
 
+            const user = users[0];
 
-            const [[workoutsCreated]] =
-                await db.query(
-                    `SELECT COUNT(*) AS total
-                     FROM workouts
-                     WHERE user_id = ?`,
-                    [userId]
-                );
+            const [[workoutsCreated]] = await db.query(
+                `SELECT COUNT(*) AS total
+                 FROM workouts
+                 WHERE user_id = ?`,
+                [userId]
+            );
 
+            const [[sessionsJoined]] = await db.query(
+                `SELECT COUNT(*) AS total
+                 FROM workout_participants
+                 WHERE user_id = ?`,
+                [userId]
+            );
 
-            const [[sessionsJoined]] =
-                await db.query(
-                    `SELECT COUNT(*) AS total
-                     FROM workout_participants
-                     WHERE user_id = ?`,
-                    [userId]
-                );
+            const [[partners]] = await db.query(
+                `SELECT COUNT(
+                    DISTINCT wp.user_id
+                 ) AS total
+                 FROM workout_participants wp
+                 INNER JOIN workouts w
+                    ON wp.workout_id = w.workout_id
+                 WHERE w.user_id = ?
+                   AND wp.user_id != ?`,
+                [
+                    userId,
+                    userId
+                ]
+            );
 
-
-            const [[partners]] =
-                await db.query(
-                    `SELECT COUNT(
-                        DISTINCT wp.user_id
-                     ) AS total
-                     FROM workout_participants wp
-                     INNER JOIN workouts w
-                        ON wp.workout_id =
-                           w.workout_id
-                     WHERE w.user_id = ?
-                       AND wp.user_id != ?`,
-                    [
-                        userId,
-                        userId
-                    ]
-                );
-
-
-            const [streakRows] =
-                await db.query(
-                    `SELECT current_streak
-                     FROM streaks
-                     WHERE user_id = ?
-                     ORDER BY
-                        streak_id DESC
-                     LIMIT 1`,
-                    [userId]
-                );
-
+            const [streakRows] = await db.query(
+                `SELECT current_streak
+                 FROM streaks
+                 WHERE user_id = ?
+                 ORDER BY streak_id DESC
+                 LIMIT 1`,
+                [userId]
+            );
 
             const currentStreak =
                 streakRows.length > 0
                     ? Number(
-                        streakRows[0]
-                            .current_streak ||
-                        0
+                        streakRows[0].current_streak || 0
                     )
                     : 0;
 
-
-            const feedback =
-                consumeFeedback(req);
-
-
-            return res.render(
-                "Profile",
-                {
-                    title:
-                        "My Profile",
-
-                    user,
-
-                    workoutsCreated:
-                        Number(
-                            workoutsCreated.total ||
-                            0
-                        ),
-
-                    workoutPartners:
-                        Number(
-                            partners.total ||
-                            0
-                        ),
-
-                    currentStreak,
-
-                    sessionsJoined:
-                        Number(
-                            sessionsJoined.total ||
-                            0
-                        ),
-
-                    feedback
-                }
-            );
-
+            return res.render("Profile", {
+                title: "My Profile",
+                user,
+                workoutsCreated: Number(
+                    workoutsCreated.total || 0
+                ),
+                workoutPartners: Number(
+                    partners.total || 0
+                ),
+                currentStreak,
+                sessionsJoined: Number(
+                    sessionsJoined.total || 0
+                )
+            });
         } catch (error) {
-
             console.error(
                 "PROFILE DASHBOARD ERROR:",
                 error
             );
 
-
-            return res.status(500).send(
-                "Error loading profile dashboard."
-            );
+            return res
+                .status(500)
+                .send(
+                    "Error loading profile dashboard."
+                );
         }
     }
 );
-
 
 // =====================================================
 // EDIT PROFILE PAGE
@@ -1120,72 +771,54 @@ router.get(
     "/profile/edit",
     requireLogin,
     async (req, res) => {
-
         try {
-
-            const userId =
-                req.session.userId;
-
-
-            const [users] =
-                await db.query(
-                    `SELECT
-                        user_id,
-                        first_name,
-                        last_name,
-                        email,
-                        fitness_goal,
-                        profile_bio,
-                        profile_picture
-                     FROM users
-                     WHERE user_id = ?
-                     LIMIT 1`,
-                    [userId]
-                );
-
-
-            if (
-                users.length === 0
-            ) {
-
-                return res.status(404).send(
-                    "User not found."
-                );
-            }
-
-
-            const feedback =
-                consumeFeedback(req);
-
-
-            return res.render(
-                "edit-profile",
-                {
-                    title:
-                        "Edit Profile",
-
-                    user:
-                        users[0],
-
-                    feedback
-                }
+            const userId = getNumericId(
+                req.session.userId
             );
 
-        } catch (error) {
+            if (!userId) {
+                req.session.destroy(() => {});
+                return res.redirect("/login");
+            }
 
+            const [users] = await db.query(
+                `SELECT
+                    user_id,
+                    first_name,
+                    last_name,
+                    email,
+                    fitness_goal,
+                    profile_bio,
+                    profile_picture
+                 FROM users
+                 WHERE user_id = ?
+                 LIMIT 1`,
+                [userId]
+            );
+
+            if (users.length === 0) {
+                req.session.destroy(() => {});
+                return res.redirect("/login");
+            }
+
+            return res.render("edit-profile", {
+                title: "Edit Profile",
+                user: users[0]
+            });
+        } catch (error) {
             console.error(
                 "EDIT PROFILE PAGE ERROR:",
                 error
             );
 
-
-            return res.status(500).send(
-                "Error loading edit profile page."
-            );
+            return res
+                .status(500)
+                .send(
+                    "Error loading edit profile page."
+                );
         }
     }
 );
-
 
 // =====================================================
 // UPDATE PROFILE
@@ -1196,16 +829,17 @@ router.post(
     requireLogin,
     uploadProfilePicture,
     async (req, res) => {
-
-        let savedProfilePicture =
-            null;
-
+        let savedProfilePicture = null;
 
         try {
+            const userId = getNumericId(
+                req.session.userId
+            );
 
-            const userId =
-                req.session.userId;
-
+            if (!userId) {
+                req.session.destroy(() => {});
+                return res.redirect("/login");
+            }
 
             const {
                 first_name,
@@ -1214,52 +848,47 @@ router.post(
                 profile_bio
             } = req.body;
 
-
-            // =================================================
-            // VALIDATION
-            // =================================================
-
             if (
                 !first_name?.trim() ||
                 !last_name?.trim() ||
                 !fitness_goal
             ) {
-
                 setFeedback(
                     req,
                     "error",
                     "First name, last name and fitness goal are required."
                 );
 
-
-                return res.redirect(
-                    "/profile/edit"
-                );
+                return res.redirect("/profile/edit");
             }
 
+            const [existingUsers] = await db.query(
+                `SELECT profile_picture
+                 FROM users
+                 WHERE user_id = ?
+                 LIMIT 1`,
+                [userId]
+            );
 
-            // =================================================
-            // PROCESS PROFILE IMAGE
-            // =================================================
+            if (existingUsers.length === 0) {
+                req.session.destroy(() => {});
+                return res.redirect("/login");
+            }
+
+            const oldProfilePicture =
+                existingUsers[0].profile_picture || null;
 
             if (req.file) {
-
                 try {
-
                     savedProfilePicture =
                         await saveProfilePicture(
                             req.file
                         );
-
-                } catch (
-                    conversionError
-                ) {
-
+                } catch (conversionError) {
                     console.error(
                         "PROFILE IMAGE CONVERSION ERROR:",
                         conversionError
                     );
-
 
                     setFeedback(
                         req,
@@ -1267,22 +896,11 @@ router.post(
                         "We couldn't process this image. Please try another photo."
                     );
 
-
-                    return res.redirect(
-                        "/profile/edit"
-                    );
+                    return res.redirect("/profile/edit");
                 }
             }
 
-
-            // =================================================
-            // UPDATE DATABASE
-            // =================================================
-
-            if (
-                savedProfilePicture
-            ) {
-
+            if (savedProfilePicture) {
                 await db.query(
                     `UPDATE users
                      SET first_name = ?,
@@ -1293,24 +911,14 @@ router.post(
                      WHERE user_id = ?`,
                     [
                         first_name.trim(),
-
                         last_name.trim(),
-
                         fitness_goal,
-
-                        profile_bio
-                            ?.trim() ||
-                            null,
-
-                        savedProfilePicture
-                            .publicPath,
-
+                        profile_bio?.trim() || null,
+                        savedProfilePicture.publicPath,
                         userId
                     ]
                 );
-
             } else {
-
                 await db.query(
                     `UPDATE users
                      SET first_name = ?,
@@ -1320,32 +928,31 @@ router.post(
                      WHERE user_id = ?`,
                     [
                         first_name.trim(),
-
                         last_name.trim(),
-
                         fitness_goal,
-
-                        profile_bio
-                            ?.trim() ||
-                            null,
-
+                        profile_bio?.trim() || null,
                         userId
                     ]
                 );
             }
 
+            if (
+                savedProfilePicture &&
+                oldProfilePicture &&
+                oldProfilePicture !==
+                    savedProfilePicture.publicPath
+            ) {
+                const oldFilePath = getUploadFilePath(
+                    oldProfilePicture
+                );
 
-            // =================================================
-            // UPDATE SESSION NAME
-            // =================================================
+                await deleteFileSafely(
+                    oldFilePath
+                );
+            }
 
             req.session.userName =
                 `${first_name.trim()} ${last_name.trim()}`;
-
-
-            // =================================================
-            // SUCCESS FEEDBACK
-            // =================================================
 
             setFeedback(
                 req,
@@ -1353,29 +960,18 @@ router.post(
                 "Your profile has been updated successfully."
             );
 
-
-            return res.redirect(
-                "/profile"
-            );
-
+            return res.redirect("/profile");
         } catch (error) {
-
             console.error(
                 "PROFILE UPDATE ERROR:",
                 error
             );
 
-
-            if (
-                savedProfilePicture
-            ) {
-
+            if (savedProfilePicture) {
                 await deleteFileSafely(
-                    savedProfilePicture
-                        .filePath
+                    savedProfilePicture.filePath
                 );
             }
-
 
             setFeedback(
                 req,
@@ -1383,71 +979,57 @@ router.post(
                 "Something went wrong while updating your profile. Please try again."
             );
 
-
-            return res.redirect(
-                "/profile/edit"
-            );
+            return res.redirect("/profile/edit");
         }
     }
 );
 
-
 // =====================================================
-// PUBLIC USER PROFILE
+// COMMUNITY USER PROFILE
 // =====================================================
 
 router.get(
     "/users/:id",
     requireLogin,
     async (req, res) => {
-
         try {
+            const profileUserId = getNumericId(
+                req.params.id
+            );
 
-            const profileUserId =
-                Number(
-                    req.params.id
-                );
+            const currentUserId = getNumericId(
+                req.session.userId
+            );
 
-
-            const currentUserId =
-                Number(
-                    req.session.userId
-                );
-
-
-            if (
-                !profileUserId
-            ) {
-
+            if (!profileUserId) {
                 return res
                     .status(400)
                     .send(
-                        "User ID is missing."
+                        "Invalid user ID."
                     );
             }
 
+            if (!currentUserId) {
+                req.session.destroy(() => {});
+                return res.redirect("/login");
+            }
 
-            const [userRows] =
-                await db.query(
-                    `SELECT
-                        user_id,
-                        first_name,
-                        last_name,
-                        fitness_goal,
-                        profile_bio,
-                        profile_picture,
-                        created_at
-                     FROM users
-                     WHERE user_id = ?
-                     LIMIT 1`,
-                    [profileUserId]
-                );
+            const [userRows] = await db.query(
+                `SELECT
+                    user_id,
+                    first_name,
+                    last_name,
+                    fitness_goal,
+                    profile_bio,
+                    profile_picture,
+                    created_at
+                 FROM users
+                 WHERE user_id = ?
+                 LIMIT 1`,
+                [profileUserId]
+            );
 
-
-            if (
-                userRows.length === 0
-            ) {
-
+            if (userRows.length === 0) {
                 return res
                     .status(404)
                     .send(
@@ -1455,70 +1037,53 @@ router.get(
                     );
             }
 
+            const user = userRows[0];
 
-            const user =
-                userRows[0];
-
-
-            const [streakRows] =
-                await db.query(
-                    `SELECT
-                        current_streak,
-                        longest_streak,
-                        last_workout_date
-                     FROM streaks
-                     WHERE user_id = ?
-                     ORDER BY
-                        streak_id DESC
-                     LIMIT 1`,
-                    [profileUserId]
-                );
-
+            const [streakRows] = await db.query(
+                `SELECT
+                    current_streak,
+                    longest_streak,
+                    last_workout_date
+                 FROM streaks
+                 WHERE user_id = ?
+                 ORDER BY streak_id DESC
+                 LIMIT 1`,
+                [profileUserId]
+            );
 
             const streak =
                 streakRows.length > 0
                     ? streakRows[0]
                     : {
-                        current_streak:
-                            0,
-
-                        longest_streak:
-                            0,
-
-                        last_workout_date:
-                            null
+                        current_streak: 0,
+                        longest_streak: 0,
+                        last_workout_date: null
                     };
 
+            const [[completedResult]] = await db.query(
+                `SELECT COUNT(*) AS total
+                 FROM workout_history
+                 WHERE user_id = ?`,
+                [profileUserId]
+            );
 
-            const [[completedResult]] =
-                await db.query(
-                    `SELECT COUNT(*) AS total
-                     FROM workout_history
-                     WHERE user_id = ?`,
-                    [profileUserId]
-                );
-
-
-            const [recentWorkouts] =
-                await db.query(
-                    `SELECT
-                        wh.workout_id,
-                        wh.workout_date,
-                        w.title,
-                        w.workout_type,
-                        w.location
-                     FROM workout_history wh
-                     INNER JOIN workouts w
-                        ON wh.workout_id =
-                           w.workout_id
-                     WHERE wh.user_id = ?
-                     ORDER BY
-                        wh.workout_date DESC,
-                        wh.created_at DESC
-                     LIMIT 5`,
-                    [profileUserId]
-                );
-
+            const [recentWorkouts] = await db.query(
+                `SELECT
+                    wh.workout_id,
+                    wh.workout_date,
+                    w.title,
+                    w.workout_type,
+                    w.location
+                 FROM workout_history wh
+                 INNER JOIN workouts w
+                    ON wh.workout_id = w.workout_id
+                 WHERE wh.user_id = ?
+                 ORDER BY
+                    wh.workout_date DESC,
+                    wh.created_at DESC
+                 LIMIT 5`,
+                [profileUserId]
+            );
 
             return res.render(
                 "public-profile",
@@ -1528,23 +1093,17 @@ router.get(
 
                     user,
 
-                    currentStreak:
-                        Number(
-                            streak.current_streak ||
-                            0
-                        ),
+                    currentStreak: Number(
+                        streak.current_streak || 0
+                    ),
 
-                    longestStreak:
-                        Number(
-                            streak.longest_streak ||
-                            0
-                        ),
+                    longestStreak: Number(
+                        streak.longest_streak || 0
+                    ),
 
-                    completedWorkouts:
-                        Number(
-                            completedResult.total ||
-                            0
-                        ),
+                    completedWorkouts: Number(
+                        completedResult.total || 0
+                    ),
 
                     recentWorkouts,
 
@@ -1555,14 +1114,11 @@ router.get(
                         profileUserId
                 }
             );
-
         } catch (error) {
-
             console.error(
                 "PUBLIC PROFILE ERROR:",
                 error
             );
-
 
             return res
                 .status(500)
@@ -1573,46 +1129,40 @@ router.get(
     }
 );
 
+// =====================================================
+// LOGOUT HANDLER
+// =====================================================
+
+function logoutUser(req, res) {
+    req.session.destroy((error) => {
+        if (error) {
+            console.error(
+                "LOGOUT ERROR:",
+                error
+            );
+
+            return res
+                .status(500)
+                .send(
+                    "Unable to log out."
+                );
+        }
+
+        res.clearCookie("connect.sid");
+
+        return res.redirect(
+            "/login?loggedOut=true"
+        );
+    });
+}
 
 // =====================================================
 // LOGOUT
 // =====================================================
-
-router.get(
+router.post(
     "/logout",
     requireLogin,
-    (req, res) => {
-
-        req.session.destroy(
-            (error) => {
-
-                if (error) {
-
-                    console.error(
-                        "LOGOUT ERROR:",
-                        error
-                    );
-
-
-                    return res
-                        .status(500)
-                        .send(
-                            "Unable to log out."
-                        );
-                }
-
-
-                res.clearCookie(
-                    "connect.sid"
-                );
-
-
-                return res.redirect(
-                    "/login?loggedOut=true"
-                );
-            }
-        );
-    }
+    logoutUser
 );
 
 

@@ -6,182 +6,321 @@ const createNotification =
 
 const router = express.Router();
 
-// --------------------------------------------------
-// LOGIN PROTECTION
-// --------------------------------------------------
+// =====================================================
+// FEEDBACK HELPER
+// =====================================================
 
-function requireLogin(req, res, next) {
-    if (!req.session || !req.session.userId) {
-        return res.redirect("/login");
+function setFeedback(
+    req,
+    type,
+    message
+) {
+    req.session.feedback = {
+        type,
+        message
+    };
+}
+
+// =====================================================
+// ID VALIDATION
+// =====================================================
+
+function getNumericId(value) {
+    const id = Number(value);
+
+    return (
+        Number.isInteger(id) &&
+        id > 0
+    )
+        ? id
+        : null;
+}
+
+// =====================================================
+// LOGIN PROTECTION
+// =====================================================
+
+function requireLogin(
+    req,
+    res,
+    next
+) {
+    if (
+        !req.session ||
+        !req.session.userId
+    ) {
+        setFeedback(
+            req,
+            "error",
+            "Please log in to continue."
+        );
+
+        return res.redirect(
+            "/login"
+        );
     }
 
     next();
 }
 
-// --------------------------------------------------
+// =====================================================
 // CHECK WHETHER TWO USERS CAN MESSAGE DIRECTLY
-// --------------------------------------------------
+// =====================================================
 
 async function usersCanMessageDirectly(
     userOneId,
-    userTwoId
+    userTwoId,
+    queryRunner = db
 ) {
-    const [sharedWorkoutRows] = await db.query(
-        `SELECT w.workout_id
-         FROM workouts w
-         INNER JOIN workout_participants wp
-            ON w.workout_id = wp.workout_id
-         WHERE
-            (
-                w.user_id = ?
-                AND wp.user_id = ?
-            )
-            OR
-            (
-                w.user_id = ?
-                AND wp.user_id = ?
-            )
-         LIMIT 1`,
-        [
-            userOneId,
-            userTwoId,
-            userTwoId,
-            userOneId
-        ]
-    );
 
-    if (sharedWorkoutRows.length > 0) {
-        return true;
-    }
+    // =================================================
+    // SHARED WORKOUT RELATIONSHIP
+    // =================================================
 
-    const [acceptedRequestRows] = await db.query(
-        `SELECT request_id
-         FROM message_requests
-         WHERE LOWER(status) = 'accepted'
-           AND (
+    const [sharedWorkoutRows] =
+        await queryRunner.query(
+            `SELECT
+                w.workout_id
+             FROM workouts w
+
+             INNER JOIN workout_participants wp
+                ON w.workout_id =
+                   wp.workout_id
+
+             WHERE
                 (
-                    sender_id = ?
-                    AND receiver_id = ?
+                    w.user_id = ?
+                    AND wp.user_id = ?
                 )
                 OR
                 (
-                    sender_id = ?
-                    AND receiver_id = ?
+                    w.user_id = ?
+                    AND wp.user_id = ?
                 )
-           )
-         LIMIT 1`,
-        [
-            userOneId,
-            userTwoId,
-            userTwoId,
-            userOneId
-        ]
-    );
 
-    return acceptedRequestRows.length > 0;
+             LIMIT 1`,
+            [
+                userOneId,
+                userTwoId,
+                userTwoId,
+                userOneId
+            ]
+        );
+
+
+    if (
+        sharedWorkoutRows.length >
+        0
+    ) {
+        return true;
+    }
+
+
+    // =================================================
+    // ACCEPTED MESSAGE REQUEST
+    // =================================================
+
+    const [acceptedRequestRows] =
+        await queryRunner.query(
+            `SELECT
+                request_id
+             FROM message_requests
+             WHERE LOWER(status) =
+                   'accepted'
+               AND
+               (
+                    (
+                        sender_id = ?
+                        AND receiver_id = ?
+                    )
+                    OR
+                    (
+                        sender_id = ?
+                        AND receiver_id = ?
+                    )
+               )
+             LIMIT 1`,
+            [
+                userOneId,
+                userTwoId,
+                userTwoId,
+                userOneId
+            ]
+        );
+
+
+    return (
+        acceptedRequestRows.length >
+        0
+    );
 }
 
-// --------------------------------------------------
+// =====================================================
 // CONVERSATION LIST
-// --------------------------------------------------
+// =====================================================
 
 router.get(
     "/messages",
     requireLogin,
     async (req, res) => {
+
         try {
-            const userId = Number(
-                req.session.userId
-            );
 
-            const [messageRows] = await db.query(
-                `SELECT
-                    m.message_id,
-                    m.sender_id,
-                    m.receiver_id,
-                    m.message,
-                    m.is_read,
-                    m.created_at,
+            const userId =
+                getNumericId(
+                    req.session.userId
+                );
 
-                    CASE
-                        WHEN m.sender_id = ?
-                        THEN m.receiver_id
-                        ELSE m.sender_id
-                    END AS partner_id,
 
-                    u.first_name
-                        AS partner_first_name,
+            // =================================================
+            // VALIDATE SESSION USER
+            // =================================================
 
-                    u.last_name
-                        AS partner_last_name,
+            if (!userId) {
 
-                    u.profile_picture
-                        AS partner_profile_picture
+                req.session.destroy(
+                    () => {}
+                );
 
-                 FROM messages m
 
-                 INNER JOIN users u
-                    ON u.user_id =
+                return res.redirect(
+                    "/login"
+                );
+            }
+
+
+            // =================================================
+            // GET MESSAGE HISTORY
+            // =================================================
+
+            const [messageRows] =
+                await db.query(
+                    `SELECT
+                        m.message_id,
+                        m.sender_id,
+                        m.receiver_id,
+                        m.message,
+                        m.is_read,
+                        m.created_at,
+
                         CASE
                             WHEN m.sender_id = ?
                             THEN m.receiver_id
                             ELSE m.sender_id
-                        END
+                        END AS partner_id,
 
-                 WHERE m.sender_id = ?
-                    OR m.receiver_id = ?
+                        u.first_name
+                            AS partner_first_name,
 
-                 ORDER BY m.created_at DESC`,
-                [
-                    userId,
-                    userId,
-                    userId,
-                    userId
-                ]
-            );
+                        u.last_name
+                            AS partner_last_name,
 
-            const conversationMap = new Map();
+                        u.profile_picture
+                            AS partner_profile_picture
 
-            for (const message of messageRows) {
-                if (
-                    !conversationMap.has(
+                     FROM messages m
+
+                     INNER JOIN users u
+                        ON u.user_id =
+                            CASE
+                                WHEN m.sender_id = ?
+                                THEN m.receiver_id
+                                ELSE m.sender_id
+                            END
+
+                     WHERE
+                        m.sender_id = ?
+                        OR
+                        m.receiver_id = ?
+
+                     ORDER BY
+                        m.created_at DESC`,
+                    [
+                        userId,
+                        userId,
+                        userId,
+                        userId
+                    ]
+                );
+
+
+            // =================================================
+            // KEEP LATEST MESSAGE PER CONVERSATION
+            // =================================================
+
+            const conversationMap =
+                new Map();
+
+
+            for (
+                const message
+                of messageRows
+            ) {
+
+                const partnerId =
+                    getNumericId(
                         message.partner_id
+                    );
+
+
+                if (
+                    !partnerId ||
+                    conversationMap.has(
+                        partnerId
                     )
                 ) {
-                    conversationMap.set(
-                        message.partner_id,
-                        {
-                            ...message,
-                            displayTime: formatDate(
+                    continue;
+                }
+
+
+                conversationMap.set(
+                    partnerId,
+                    {
+                        ...message,
+
+                        displayTime:
+                            formatDate(
                                 message.created_at
                             )
-                        }
-                    );
-                }
+                    }
+                );
             }
+
 
             const conversations =
                 Array.from(
                     conversationMap.values()
                 );
 
-            const [users] = await db.query(
-                `SELECT
-                    user_id,
-                    first_name,
-                    last_name,
-                    profile_picture
-                 FROM users
-                 WHERE user_id != ?
-                 ORDER BY
-                    first_name ASC,
-                    last_name ASC`,
-                [userId]
-            );
+
+            // =================================================
+            // USERS AVAILABLE TO START A CONVERSATION WITH
+            // =================================================
+
+            const [users] =
+                await db.query(
+                    `SELECT
+                        user_id,
+                        first_name,
+                        last_name,
+                        profile_picture
+                     FROM users
+                     WHERE user_id != ?
+                     ORDER BY
+                        first_name ASC,
+                        last_name ASC`,
+                    [userId]
+                );
+
+
+            // =================================================
+            // PENDING MESSAGE REQUEST COUNT
+            // =================================================
 
             const [[pendingResult]] =
                 await db.query(
-                    `SELECT COUNT(*) AS total
+                    `SELECT
+                        COUNT(*) AS total
                      FROM message_requests
                      WHERE receiver_id = ?
                        AND LOWER(status) =
@@ -189,56 +328,126 @@ router.get(
                     [userId]
                 );
 
-            res.render("messages", {
-                title: "Messages",
-                conversations,
-                users,
-                pendingRequestCount:
-                    pendingResult.total
-            });
+
+            // =================================================
+            // RENDER
+            // =================================================
+
+            return res.render(
+                "messages",
+                {
+                    title:
+                        "Messages",
+
+                    conversations,
+
+                    users,
+
+                    pendingRequestCount:
+                        Number(
+                            pendingResult.total ||
+                            0
+                        )
+                }
+            );
+
         } catch (error) {
+
             console.error(
                 "MESSAGES PAGE ERROR:",
                 error
             );
 
-            res.status(500).send(
-                error.sqlMessage ||
-                error.message ||
-                "Error loading messages."
-            );
+
+            return res
+                .status(500)
+                .send(
+                    "Error loading messages."
+                );
         }
     }
 );
 
-// --------------------------------------------------
+// =====================================================
 // VIEW ONE PRIVATE CONVERSATION
-// --------------------------------------------------
+// =====================================================
 
 router.get(
     "/messages/:userId",
     requireLogin,
     async (req, res) => {
-        try {
-            const currentUserId = Number(
-                req.session.userId
-            );
 
-            const partnerId = Number(
-                req.params.userId
-            );
+        try {
+
+            const currentUserId =
+                getNumericId(
+                    req.session.userId
+                );
+
+
+            const partnerId =
+                getNumericId(
+                    req.params.userId
+                );
+
+
+            // =================================================
+            // VALIDATE SESSION
+            // =================================================
+
+            if (!currentUserId) {
+
+                req.session.destroy(
+                    () => {}
+                );
+
+
+                return res.redirect(
+                    "/login"
+                );
+            }
+
+
+            // =================================================
+            // VALIDATE CHAT PARTNER
+            // =================================================
 
             if (!partnerId) {
-                return res.status(400).send(
-                    "Chat partner is missing."
+
+                setFeedback(
+                    req,
+                    "warning",
+                    "That chat partner could not be found."
+                );
+
+
+                return res.redirect(
+                    "/messages"
                 );
             }
 
-            if (currentUserId === partnerId) {
-                return res.status(400).send(
+
+            if (
+                currentUserId ===
+                partnerId
+            ) {
+
+                setFeedback(
+                    req,
+                    "warning",
                     "You cannot message yourself."
                 );
+
+
+                return res.redirect(
+                    "/messages"
+                );
             }
+
+
+            // =================================================
+            // FIND CHAT PARTNER
+            // =================================================
 
             const [partnerRows] =
                 await db.query(
@@ -253,13 +462,32 @@ router.get(
                     [partnerId]
                 );
 
-            if (partnerRows.length === 0) {
-                return res.status(404).send(
-                    "User not found."
+
+            if (
+                partnerRows.length ===
+                0
+            ) {
+
+                setFeedback(
+                    req,
+                    "warning",
+                    "That GymBuddy user could not be found."
+                );
+
+
+                return res.redirect(
+                    "/messages"
                 );
             }
 
-            const partner = partnerRows[0];
+
+            const partner =
+                partnerRows[0];
+
+
+            // =================================================
+            // CHECK DIRECT MESSAGE PERMISSION
+            // =================================================
 
             const canMessage =
                 await usersCanMessageDirectly(
@@ -267,9 +495,17 @@ router.get(
                     partnerId
                 );
 
-            let requestStatus = null;
+
+            let requestStatus =
+                null;
+
+
+            // =================================================
+            // FIND CURRENT MESSAGE REQUEST STATUS
+            // =================================================
 
             if (!canMessage) {
+
                 const [requestRows] =
                     await db.query(
                         `SELECT
@@ -288,7 +524,8 @@ router.get(
                                 sender_id = ?
                                 AND receiver_id = ?
                             )
-                         ORDER BY created_at DESC
+                         ORDER BY
+                            created_at DESC
                          LIMIT 1`,
                         [
                             currentUserId,
@@ -298,15 +535,30 @@ router.get(
                         ]
                     );
 
-                if (requestRows.length > 0) {
+
+                if (
+                    requestRows.length >
+                    0
+                ) {
                     requestStatus =
-                        requestRows[0].status;
+                        String(
+                            requestRows[0]
+                                .status ||
+                            ""
+                        ).toLowerCase();
                 }
             }
 
+
             let messages = [];
 
+
+            // =================================================
+            // LOAD PRIVATE MESSAGES
+            // =================================================
+
             if (canMessage) {
+
                 const [messageRows] =
                     await db.query(
                         `SELECT
@@ -353,14 +605,23 @@ router.get(
                         ]
                     );
 
-                messages = messageRows.map(
-                    (message) => ({
-                        ...message,
-                        displayTime: formatDate(
-                            message.created_at
-                        )
-                    })
-                );
+
+                messages =
+                    messageRows.map(
+                        (message) => ({
+                            ...message,
+
+                            displayTime:
+                                formatDate(
+                                    message.created_at
+                                )
+                        })
+                    );
+
+
+                // =================================================
+                // MARK RECEIVED MESSAGES AS READ
+                // =================================================
 
                 await db.query(
                     `UPDATE messages
@@ -375,70 +636,167 @@ router.get(
                 );
             }
 
-            res.render("private-chat", {
-                title:
-                    `${partner.first_name} ${partner.last_name}`,
-                partner,
-                messages,
-                canMessage,
-                requestStatus,
-                currentUserId
-            });
+
+            // =================================================
+            // RENDER PRIVATE CHAT
+            // =================================================
+
+            return res.render(
+                "private-chat",
+                {
+                    title:
+                        `${partner.first_name} ${partner.last_name}`,
+
+                    partner,
+
+                    messages,
+
+                    canMessage,
+
+                    requestStatus,
+
+                    currentUserId
+                }
+            );
+
         } catch (error) {
+
             console.error(
                 "PRIVATE CHAT PAGE ERROR:",
                 error
             );
 
-            res.status(500).send(
-                error.sqlMessage ||
-                error.message ||
-                "Error loading private conversation."
-            );
+
+            return res
+                .status(500)
+                .send(
+                    "Error loading private conversation."
+                );
         }
     }
 );
 
-// --------------------------------------------------
+// =====================================================
 // SEND MESSAGE OR CREATE MESSAGE REQUEST
-// --------------------------------------------------
+// =====================================================
 
 router.post(
     "/messages/:userId",
     requireLogin,
     async (req, res) => {
-        try {
-            const senderId = Number(
-                req.session.userId
-            );
 
-            const receiverId = Number(
-                req.params.userId
-            );
+        let connection;
+
+        try {
+
+            const senderId =
+                getNumericId(
+                    req.session.userId
+                );
+
+
+            const receiverId =
+                getNumericId(
+                    req.params.userId
+                );
+
 
             const message =
-                req.body.message?.trim();
+                req.body.message
+                    ?.trim();
+
+
+            // =================================================
+            // VALIDATE SESSION
+            // =================================================
+
+            if (!senderId) {
+
+                req.session.destroy(
+                    () => {}
+                );
+
+
+                return res.redirect(
+                    "/login"
+                );
+            }
+
+
+            // =================================================
+            // VALIDATE RECEIVER
+            // =================================================
 
             if (!receiverId) {
-                return res.status(400).send(
-                    "Message receiver is missing."
+
+                setFeedback(
+                    req,
+                    "warning",
+                    "That message receiver could not be found."
+                );
+
+
+                return res.redirect(
+                    "/messages"
                 );
             }
 
-            if (senderId === receiverId) {
-                return res.status(400).send(
+
+            if (
+                senderId ===
+                receiverId
+            ) {
+
+                setFeedback(
+                    req,
+                    "warning",
                     "You cannot message yourself."
                 );
-            }
 
-            if (!message) {
-                return res.status(400).send(
-                    "Please enter a message."
+
+                return res.redirect(
+                    "/messages"
                 );
             }
 
+
+            // =================================================
+            // VALIDATE MESSAGE
+            // =================================================
+
+            if (!message) {
+
+                setFeedback(
+                    req,
+                    "warning",
+                    "Please enter a message."
+                );
+
+
+                return res.redirect(
+                    `/messages/${receiverId}`
+                );
+            }
+
+
+            // =================================================
+            // START TRANSACTION
+            // =================================================
+
+            connection =
+                await db.getConnection();
+
+
+            await connection
+                .beginTransaction();
+
+
+            // =================================================
+            // CONFIRM RECEIVER EXISTS
+            // =================================================
+
             const [receiverRows] =
-                await db.query(
+                await connection.query(
                     `SELECT
                         user_id,
                         first_name,
@@ -449,28 +807,53 @@ router.post(
                     [receiverId]
                 );
 
-            if (receiverRows.length === 0) {
-                return res.status(404).send(
-                    "Receiver not found."
+
+            if (
+                receiverRows.length ===
+                0
+            ) {
+
+                await connection
+                    .rollback();
+
+
+                setFeedback(
+                    req,
+                    "warning",
+                    "That GymBuddy user could not be found."
+                );
+
+
+                return res.redirect(
+                    "/messages"
                 );
             }
+
+
+            // =================================================
+            // CHECK DIRECT MESSAGE PERMISSION
+            // =================================================
 
             const canMessage =
                 await usersCanMessageDirectly(
                     senderId,
-                    receiverId
+                    receiverId,
+                    connection
                 );
+
 
             const senderName =
                 req.session.userName ||
                 "Someone";
 
-            // --------------------------------------------------
+
+            // =================================================
             // DIRECT MESSAGE
-            // --------------------------------------------------
+            // =================================================
 
             if (canMessage) {
-                await db.query(
+
+                await connection.query(
                     `INSERT INTO messages
                      (
                         sender_id,
@@ -486,30 +869,39 @@ router.post(
                     ]
                 );
 
+
                 await createNotification(
                     receiverId,
                     `${senderName} sent you a private message.`,
-                    `/messages/${senderId}`
+                    `/messages/${senderId}`,
+                    connection
                 );
+
+
+                await connection
+                    .commit();
+
 
                 return res.redirect(
                     `/messages/${receiverId}`
                 );
             }
 
-            // --------------------------------------------------
-            // CHECK EXISTING REQUEST
-            // --------------------------------------------------
+
+            // =================================================
+            // CHECK EXISTING MESSAGE REQUEST
+            // =================================================
 
             const [existingRequestRows] =
-                await db.query(
+                await connection.query(
                     `SELECT
                         request_id,
                         status
                      FROM message_requests
                      WHERE sender_id = ?
                        AND receiver_id = ?
-                     ORDER BY created_at DESC
+                     ORDER BY
+                        created_at DESC
                      LIMIT 1`,
                     [
                         senderId,
@@ -517,39 +909,107 @@ router.post(
                     ]
                 );
 
+
             if (
-                existingRequestRows.length > 0
+                existingRequestRows.length >
+                0
             ) {
+
                 const existingStatus =
                     String(
                         existingRequestRows[0]
-                            .status
+                            .status ||
+                        ""
                     ).toLowerCase();
 
+
+                // =============================================
+                // PENDING REQUEST
+                // =============================================
+
                 if (
-                    existingStatus === "pending"
+                    existingStatus ===
+                    "pending"
                 ) {
-                    return res.status(400).send(
+
+                    await connection
+                        .rollback();
+
+
+                    setFeedback(
+                        req,
+                        "warning",
                         "You already have a pending message request for this user."
+                    );
+
+
+                    return res.redirect(
+                        `/messages/${receiverId}`
                     );
                 }
 
+
+                // =============================================
+                // ACCEPTED REQUEST
+                // =============================================
+
                 if (
-                    existingStatus === "rejected"
+                    existingStatus ===
+                    "accepted"
                 ) {
-                    return res.status(403).send(
-                        "Your previous message request was rejected."
+
+                    await connection
+                        .rollback();
+
+
+                    setFeedback(
+                        req,
+                        "info",
+                        "Your message request has already been accepted. You can message this user directly."
+                    );
+
+
+                    return res.redirect(
+                        `/messages/${receiverId}`
+                    );
+                }
+
+
+                // =============================================
+                // REJECTED REQUEST
+                // =============================================
+
+                if (
+                    existingStatus ===
+                    "rejected"
+                ) {
+
+                    await connection
+                        .rollback();
+
+
+                    setFeedback(
+                        req,
+                        "warning",
+                        "Your previous message request to this user was rejected."
+                    );
+
+
+                    return res.redirect(
+                        `/messages/${receiverId}`
                     );
                 }
             }
 
-            // --------------------------------------------------
-            // CHECK REVERSE REQUEST
-            // --------------------------------------------------
+
+            // =================================================
+            // CHECK REVERSE PENDING REQUEST
+            // =================================================
 
             const [reverseRequestRows] =
-                await db.query(
-                    `SELECT request_id
+                await connection.query(
+                    `SELECT
+                        request_id
                      FROM message_requests
                      WHERE sender_id = ?
                        AND receiver_id = ?
@@ -562,19 +1022,34 @@ router.post(
                     ]
                 );
 
+
             if (
-                reverseRequestRows.length > 0
+                reverseRequestRows.length >
+                0
             ) {
-                return res.status(400).send(
+
+                await connection
+                    .rollback();
+
+
+                setFeedback(
+                    req,
+                    "info",
                     "This user has already sent you a message request. Open Message Requests to respond."
+                );
+
+
+                return res.redirect(
+                    "/message-requests"
                 );
             }
 
-            // --------------------------------------------------
-            // CREATE MESSAGE REQUEST
-            // --------------------------------------------------
 
-            await db.query(
+            // =================================================
+            // CREATE MESSAGE REQUEST
+            // =================================================
+
+            await connection.query(
                 `INSERT INTO message_requests
                  (
                     sender_id,
@@ -590,25 +1065,68 @@ router.post(
                 ]
             );
 
+
             await createNotification(
                 receiverId,
                 `${senderName} sent you a message request.`,
-                "/message-requests"
+                "/message-requests",
+                connection
             );
 
-            res.redirect("/messages");
+
+            await connection
+                .commit();
+
+
+            setFeedback(
+                req,
+                "success",
+                "Message request sent successfully."
+            );
+
+
+            return res.redirect(
+                `/messages/${receiverId}`
+            );
 
         } catch (error) {
+
+            if (connection) {
+
+                try {
+
+                    await connection
+                        .rollback();
+
+                } catch (
+                    rollbackError
+                ) {
+
+                    console.error(
+                        "MESSAGE ROLLBACK ERROR:",
+                        rollbackError
+                    );
+                }
+            }
+
+
             console.error(
                 "SEND PRIVATE MESSAGE ERROR:",
                 error
             );
 
-            res.status(500).send(
-                error.sqlMessage ||
-                error.message ||
-                "Error sending private message."
-            );
+
+            return res
+                .status(500)
+                .send(
+                    "Error sending private message."
+                );
+
+        } finally {
+
+            if (connection) {
+                connection.release();
+            }
         }
     }
 );

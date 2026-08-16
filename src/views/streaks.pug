@@ -37,13 +37,13 @@ block content
                     streak.current_streak ||
                     streak.current_count ||
                     0
-                )
+                );
 
                 const longestStreak = Number(
                     streak.longest_streak ||
                     currentStreak ||
                     0
-                )
+                );
 
 
             section.streak-dashboard
@@ -64,28 +64,23 @@ block content
                         = currentStreak
 
                     p.current-streak-unit
+
                         if currentStreak === 1
                             | day
                         else
                             | days
 
-                    if currentStreak === 0
 
+                    if currentStreak === 0
                         p.current-streak-message
                             | Complete a workout to start your streak.
-
                     else if currentStreak < 3
-
                         p.current-streak-message
                             | Nice start. Keep the momentum going.
-
                     else if currentStreak < 7
-
                         p.current-streak-message
                             | You're building a solid routine.
-
                     else
-
                         p.current-streak-message
                             | You're on fire. Keep showing up. 🔥
 
@@ -107,9 +102,10 @@ block content
                                 | LONGEST STREAK
 
                             strong
-                                | #{longestStreak}
+                                = longestStreak
 
                             span
+
                                 if longestStreak === 1
                                     | day
                                 else
@@ -128,20 +124,25 @@ block content
 
                             if streak.last_workout_date
 
-                                strong.streak-date
-                                    = new Date(
+                                -
+                                    const workoutDate = new Date(
                                         streak.last_workout_date
-                                    ).toLocaleDateString(
-                                        "en-GB",
-                                        {
-                                            day: "2-digit",
-                                            month: "short",
-                                            year: "numeric"
-                                        }
-                                    )
+                                    );
+
+                                    const formattedLastWorkout =
+                                        workoutDate.toLocaleDateString(
+                                            "en-GB",
+                                            {
+                                                day: "2-digit",
+                                                month: "short",
+                                                year: "numeric"
+                                            }
+                                        );
+
+                                strong.streak-date
+                                    = formattedLastWorkout
 
                             else
-
                                 strong.streak-date
                                     | No workout yet
 
@@ -170,12 +171,12 @@ block content
                     if currentStreak < 3
 
                         -
-                            const milestone = 3
-                            const progress =
-                                Math.min(
-                                    (currentStreak / milestone) * 100,
-                                    100
-                                )
+                            const milestone = 3;
+
+                            const progress = Math.min(
+                                (currentStreak / milestone) * 100,
+                                100
+                            );
 
                         .streak-progress-top
 
@@ -199,12 +200,12 @@ block content
                     else if currentStreak < 7
 
                         -
-                            const milestone = 7
-                            const progress =
-                                Math.min(
-                                    (currentStreak / milestone) * 100,
-                                    100
-                                )
+                            const milestone = 7;
+
+                            const progress = Math.min(
+                                (currentStreak / milestone) * 100,
+                                100
+                            );
 
                         .streak-progress-top
 
@@ -228,12 +229,12 @@ block content
                     else if currentStreak < 14
 
                         -
-                            const milestone = 14
-                            const progress =
-                                Math.min(
-                                    (currentStreak / milestone) * 100,
-                                    100
-                                )
+                            const milestone = 14;
+
+                            const progress = Math.min(
+                                (currentStreak / milestone) * 100,
+                                100
+                            );
 
                         .streak-progress-top
 
@@ -257,12 +258,12 @@ block content
                     else if currentStreak < 30
 
                         -
-                            const milestone = 30
-                            const progress =
-                                Math.min(
-                                    (currentStreak / milestone) * 100,
-                                    100
-                                )
+                            const milestone = 30;
+
+                            const progress = Math.min(
+                                (currentStreak / milestone) * 100,
+                                100
+                            );
 
                         .streak-progress-top
 
@@ -326,11 +327,11 @@ block content
                     | Find a Workout →
 
 
-        // =====================================================
-        // NO STREAK
-        // =====================================================
-
         else
+
+            // =================================================
+            // NO STREAK
+            // =================================================
 
             section.streak-empty-state
 

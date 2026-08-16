@@ -1,311 +1,579 @@
 extends layout
 
 block content
+
     main.help-centre-page
 
-        h1 🆘 GymBuddy Help Centre
+        // =====================================================
+        // HERO
+        // =====================================================
 
-        p
-            | Welcome to the GymBuddy Help Centre.
-            | Find answers to common questions about your
-            | account, workouts, messaging, recommendations
-            | and other features.
+        section.help-hero
 
-        //=====================================================
-        // ACCOUNT & LOGIN
-        //=====================================================
+            .help-hero-content
 
-        section.help-category
-            h2 🔐 Account & Login
+                p.help-eyebrow
+                    | GYMBUDDY SUPPORT
 
-            details
-                summary I cannot log into my account
+                h1 Help Centre
 
-                p
-                    | Make sure you are entering the email
-                    | address and password associated with
-                    | your GymBuddy account.
+                p.help-hero-description
+                    | Find quick answers about your account,
+                    | workouts, messages, recommendations,
+                    | notifications and GymBuddy features.
 
-                p
-                    | GymBuddy account emails currently use
-                    | the @buddy.co.uk domain.
 
-            details
-                summary How do I create an account?
+            .help-hero-icon
+                | 🆘
 
-                p
-                    | Select Create an Account from the
-                    | GymBuddy home page and complete the
-                    | registration process.
 
-            details
-                summary How do I edit my profile?
+        // =====================================================
+        // HELP INTRO
+        // =====================================================
+
+        section.help-intro
+
+            .help-intro-copy
+
+                h2 How can we help?
 
                 p
-                    | Open My Profile and select Edit Profile.
-                    | You can update information such as your
-                    | name, fitness goal, profile bio and
-                    | profile picture.
+                    | Browse the categories below and open
+                    | any question to see the answer.
 
-        //=====================================================
-        // WORKOUTS
-        //=====================================================
-
-        section.help-category
-            h2 🏋️ Workouts
-
-            details
-                summary How do I create a workout?
-
-                p
-                    | Open the Workouts section and select
-                    | Create Workout.
-
-                p
-                    | Enter the workout type, location,
-                    | start time, end time and other required
-                    | information.
-
-            details
-                summary How do I join somebody else's workout?
-
-                p
-                    | Open the workout details page and send
-                    | a join request.
-
-                p
-                    | The workout owner must accept your
-                    | request before you become an accepted
-                    | participant.
-
-            details
-                summary What happens after my join request is accepted?
-
-                p
-                    | The workout is added to your Joined
-                    | Workouts and you gain access to the
-                    | workout group chat.
-
-            details
-                summary What happens when a workout is cancelled?
-
-                p
-                    | When the workout owner cancels a workout,
-                    | all accepted participants receive a
-                    | notification.
-
-            details
-                summary When can a workout be marked as completed?
-
-                p
-                    | Only the workout owner can mark a workout
-                    | as completed.
-
-                p
-                    | The workout can only be completed after
-                    | its scheduled end time.
-
-            details
-                summary What happens when a workout is completed?
-
-                p
-                    | The workout status becomes completed.
-
-                p
-                    | Workout history and streak information
-                    | are updated for the owner and accepted
-                    | participants.
-
-        //=====================================================
-        // MESSAGING
-        //=====================================================
-
-        section.help-category
-            h2 💬 Messaging
-
-            details
-                summary How does private messaging work?
-
-                p
-                    | GymBuddy allows one-to-one private
-                    | conversations between users.
-
-                p
-                    | Users who are already connected through
-                    | an accepted workout can communicate
-                    | directly.
-
-            details
-                summary What is a message request?
-
-                p
-                    | If you are not already connected with
-                    | another user, your first message can be
-                    | sent as a message request.
-
-                p
-                    | The receiver can accept or reject the
-                    | request.
-
-            details
-                summary Who can use a workout group chat?
-
-                p
-                    | The workout owner and accepted
-                    | participants can access that workout's
-                    | group chat.
-
-        //=====================================================
-        // RECOMMENDATIONS
-        //=====================================================
-
-        section.help-category
-            h2 🤝 Partner Recommendations
-
-            details
-                summary What is the Partner Recommendation System?
-
-                p
-                    | GymBuddy recommends users who may be
-                    | compatible workout partners.
-
-            details
-                summary How is my compatibility score calculated?
-
-                p
-                    | GymBuddy currently compares several
-                    | factors including fitness goals,
-                    | workout streaks, workout experience
-                    | and shared workout interests.
-
-            details
-                summary What does a higher percentage mean?
-
-                p
-                    | A higher percentage indicates that the
-                    | recommendation system found more
-                    | similarities between your workout
-                    | information and the other user's
-                    | information.
-
-            details
-                summary Can I view a recommended user's profile?
-
-                p
-                    | Yes. Select View Profile from the
-                    | recommendations page to see their
-                    | public GymBuddy profile.
-
-        //=====================================================
-        // NOTIFICATIONS
-        //=====================================================
-
-        section.help-category
-            h2 🔔 Notifications
-
-            details
-                summary What notifications does GymBuddy send?
-
-                p
-                    | GymBuddy may notify you about workout
-                    | join requests, accepted or rejected
-                    | requests, private messages, message
-                    | requests, workout cancellations and
-                    | workout completions.
-
-            details
-                summary Can I mark notifications as read?
-
-                p
-                    | Yes. You can mark individual
-                    | notifications as read or use
-                    | Mark All as Read.
-
-            details
-                summary Can I delete notifications?
-
-                p
-                    | Yes. Notifications can be deleted
-                    | individually.
-
-        //=====================================================
-        // STREAKS & HISTORY
-        //=====================================================
-
-        section.help-category
-            h2 🔥 Workout Streaks & History
-
-            details
-                summary How are workout streaks updated?
-
-                p
-                    | Workout streaks update when completed
-                    | workouts are recorded.
-
-                p
-                    | Consecutive workout days increase the
-                    | streak, while completing multiple
-                    | workouts on the same day does not
-                    | incorrectly increase it multiple times.
-
-            details
-                summary Where does my workout history come from?
-
-                p
-                    | Completed workouts are recorded in your
-                    | GymBuddy workout history.
-
-        //=====================================================
-        // SAFETY & REPORTING
-        //=====================================================
-
-        section.help-category
-            h2 🚩 Safety & Reporting
-
-            details
-                summary How do I report a workout?
-
-                p
-                    | Open the relevant workout and select
-                    | the report option.
-
-            details
-                summary What types of problems can I report?
-
-                p
-                    | Reports may include spam, unsafe
-                    | activity, suspicious behaviour,
-                    | inappropriate workout information
-                    | or other concerns.
-
-        //=====================================================
-        // SUPPORT
-        //=====================================================
-
-        section.help-category
-            h2 🛠 Still Need Help?
-
-            p
-                | If you cannot find an answer in the Help
-                | Centre, you can contact GymBuddy Support.
 
             if isLoggedIn
+
+                a.help-support-shortcut(
+                    href="/support"
+                )
+                    | 🎧 Contact Support
+
+
+        // =====================================================
+        // HELP CATEGORIES
+        // =====================================================
+
+        section.help-category-grid
+
+            // =================================================
+            // ACCOUNT & LOGIN
+            // =================================================
+
+            article.help-category-card
+
+                .help-category-heading
+
+                    .help-category-icon
+                        | 🔐
+
+                    div
+
+                        p.help-category-eyebrow
+                            | ACCOUNT
+
+                        h2 Account & Login
+
+
+                .help-accordion
+
+                    details.help-faq-item
+
+                        summary
+                            | I cannot log into my account
+
+                        .help-faq-answer
+
+                            p
+                                | Make sure you are entering the email
+                                | address and password associated with
+                                | your GymBuddy account.
+
+                            p
+                                | GymBuddy account emails currently use
+                                | the @buddy.co.uk domain.
+
+
+                    details.help-faq-item
+
+                        summary
+                            | How do I create an account?
+
+                        .help-faq-answer
+
+                            p
+                                | Select Create an Account from the
+                                | GymBuddy home page and complete the
+                                | registration process.
+
+
+                    details.help-faq-item
+
+                        summary
+                            | How do I edit my profile?
+
+                        .help-faq-answer
+
+                            p
+                                | Open My Profile and select Edit Profile.
+                                | You can update your name, fitness goal,
+                                | profile bio and profile picture.
+
+
+            // =================================================
+            // WORKOUTS
+            // =================================================
+
+            article.help-category-card
+
+                .help-category-heading
+
+                    .help-category-icon
+                        | 🏋️
+
+                    div
+
+                        p.help-category-eyebrow
+                            | TRAINING
+
+                        h2 Workouts
+
+
+                .help-accordion
+
+                    details.help-faq-item
+
+                        summary
+                            | How do I create a workout?
+
+                        .help-faq-answer
+
+                            p
+                                | Open the Workouts section and select
+                                | Create Workout.
+
+                            p
+                                | Enter the workout type, location,
+                                | start time, end time and other
+                                | required information.
+
+
+                    details.help-faq-item
+
+                        summary
+                            | How do I join somebody else's workout?
+
+                        .help-faq-answer
+
+                            p
+                                | Open the workout details page and send
+                                | a join request.
+
+                            p
+                                | The workout owner must accept your
+                                | request before you become an accepted
+                                | participant.
+
+
+                    details.help-faq-item
+
+                        summary
+                            | What happens after my join request is accepted?
+
+                        .help-faq-answer
+
+                            p
+                                | The workout is added to your Joined
+                                | Workouts and you gain access to the
+                                | workout group chat.
+
+
+                    details.help-faq-item
+
+                        summary
+                            | What happens when a workout is cancelled?
+
+                        .help-faq-answer
+
+                            p
+                                | When the workout owner cancels a workout,
+                                | all accepted participants receive a
+                                | notification.
+
+
+                    details.help-faq-item
+
+                        summary
+                            | When can a workout be marked as completed?
+
+                        .help-faq-answer
+
+                            p
+                                | Only the workout owner can mark a workout
+                                | as completed.
+
+                            p
+                                | The workout can only be completed after
+                                | its scheduled end time.
+
+
+                    details.help-faq-item
+
+                        summary
+                            | What happens when a workout is completed?
+
+                        .help-faq-answer
+
+                            p
+                                | The workout status becomes completed.
+
+                            p
+                                | Workout history and streak information
+                                | are updated for the owner and accepted
+                                | participants.
+
+
+            // =================================================
+            // MESSAGING
+            // =================================================
+
+            article.help-category-card
+
+                .help-category-heading
+
+                    .help-category-icon
+                        | 💬
+
+                    div
+
+                        p.help-category-eyebrow
+                            | COMMUNICATION
+
+                        h2 Messaging
+
+
+                .help-accordion
+
+                    details.help-faq-item
+
+                        summary
+                            | How does private messaging work?
+
+                        .help-faq-answer
+
+                            p
+                                | GymBuddy allows one-to-one private
+                                | conversations between users.
+
+                            p
+                                | Users who are already connected through
+                                | an accepted workout can communicate
+                                | directly.
+
+
+                    details.help-faq-item
+
+                        summary
+                            | What is a message request?
+
+                        .help-faq-answer
+
+                            p
+                                | If you are not already connected with
+                                | another user, your first message can be
+                                | sent as a message request.
+
+                            p
+                                | The receiver can accept or reject the
+                                | request.
+
+
+                    details.help-faq-item
+
+                        summary
+                            | Who can use a workout group chat?
+
+                        .help-faq-answer
+
+                            p
+                                | The workout owner and accepted
+                                | participants can access that workout's
+                                | group chat.
+
+
+            // =================================================
+            // RECOMMENDATIONS
+            // =================================================
+
+            article.help-category-card
+
+                .help-category-heading
+
+                    .help-category-icon
+                        | 🤝
+
+                    div
+
+                        p.help-category-eyebrow
+                            | MATCHING
+
+                        h2 Partner Recommendations
+
+
+                .help-accordion
+
+                    details.help-faq-item
+
+                        summary
+                            | What is the Partner Recommendation System?
+
+                        .help-faq-answer
+
+                            p
+                                | GymBuddy recommends users who may be
+                                | compatible workout partners.
+
+
+                    details.help-faq-item
+
+                        summary
+                            | How is my compatibility score calculated?
+
+                        .help-faq-answer
+
+                            p
+                                | GymBuddy currently compares several
+                                | factors including fitness goals,
+                                | workout streaks, workout experience
+                                | and shared workout interests.
+
+
+                    details.help-faq-item
+
+                        summary
+                            | What does a higher percentage mean?
+
+                        .help-faq-answer
+
+                            p
+                                | A higher percentage indicates that the
+                                | recommendation system found more
+                                | similarities between your workout
+                                | information and the other user's
+                                | information.
+
+
+                    details.help-faq-item
+
+                        summary
+                            | Can I view a recommended user's profile?
+
+                        .help-faq-answer
+
+                            p
+                                | Yes. Select View Profile from the
+                                | recommendations page to see their
+                                | public GymBuddy profile.
+
+
+            // =================================================
+            // NOTIFICATIONS
+            // =================================================
+
+            article.help-category-card
+
+                .help-category-heading
+
+                    .help-category-icon
+                        | 🔔
+
+                    div
+
+                        p.help-category-eyebrow
+                            | UPDATES
+
+                        h2 Notifications
+
+
+                .help-accordion
+
+                    details.help-faq-item
+
+                        summary
+                            | What notifications does GymBuddy send?
+
+                        .help-faq-answer
+
+                            p
+                                | GymBuddy may notify you about workout
+                                | join requests, accepted or rejected
+                                | requests, private messages, message
+                                | requests, workout cancellations and
+                                | workout completions.
+
+
+                    details.help-faq-item
+
+                        summary
+                            | Can I mark notifications as read?
+
+                        .help-faq-answer
+
+                            p
+                                | Yes. You can mark individual
+                                | notifications as read or use
+                                | Mark All as Read.
+
+
+                    details.help-faq-item
+
+                        summary
+                            | Can I delete notifications?
+
+                        .help-faq-answer
+
+                            p
+                                | Yes. Notifications can be deleted
+                                | individually.
+
+
+            // =================================================
+            // STREAKS
+            // =================================================
+
+            article.help-category-card
+
+                .help-category-heading
+
+                    .help-category-icon
+                        | 🔥
+
+                    div
+
+                        p.help-category-eyebrow
+                            | PROGRESS
+
+                        h2 Workout Streaks & History
+
+
+                .help-accordion
+
+                    details.help-faq-item
+
+                        summary
+                            | How are workout streaks updated?
+
+                        .help-faq-answer
+
+                            p
+                                | Workout streaks update when completed
+                                | workouts are recorded.
+
+                            p
+                                | Consecutive workout days increase the
+                                | streak, while completing multiple
+                                | workouts on the same day does not
+                                | incorrectly increase it multiple times.
+
+
+                    details.help-faq-item
+
+                        summary
+                            | Where does my workout history come from?
+
+                        .help-faq-answer
+
+                            p
+                                | Completed workouts are recorded in your
+                                | GymBuddy workout history.
+
+
+            // =================================================
+            // SAFETY & REPORTING
+            // =================================================
+
+            article.help-category-card
+
+                .help-category-heading
+
+                    .help-category-icon
+                        | 🚩
+
+                    div
+
+                        p.help-category-eyebrow
+                            | SAFETY
+
+                        h2 Safety & Reporting
+
+
+                .help-accordion
+
+                    details.help-faq-item
+
+                        summary
+                            | How do I report a workout?
+
+                        .help-faq-answer
+
+                            p
+                                | Open the relevant workout and select
+                                | the report option.
+
+
+                    details.help-faq-item
+
+                        summary
+                            | What types of problems can I report?
+
+                        .help-faq-answer
+
+                            p
+                                | Reports may include spam, unsafe
+                                | activity, suspicious behaviour,
+                                | inappropriate workout information
+                                | or other concerns.
+
+
+        // =====================================================
+        // SUPPORT CTA
+        // =====================================================
+
+        section.help-support-cta
+
+            .help-support-cta-icon
+                | 🎧
+
+
+            .help-support-cta-content
+
+                p.help-eyebrow
+                    | STILL NEED HELP?
+
+                h2 Talk to GymBuddy Support
+
                 p
-                    a(
+                    | If you couldn't find the answer you need,
+                    | submit a support ticket and describe the issue.
+
+
+            .help-support-cta-actions
+
+                if isLoggedIn
+
+                    a.primary-button(
                         href="/support"
-                    ) 📩 Contact Support
+                    )
+                        | Contact Support
 
-                p
-                    a(
+                    a.secondary-button(
                         href="/my-support-tickets"
-                    ) 🎫 My Support Tickets
+                    )
+                        | My Support Tickets
 
-            else
-                p
-                    | Please log in to submit or manage a
-                    | support ticket.
+                else
 
-                p
-                    a(
+                    a.primary-button(
                         href="/login"
-                    ) Login to Contact Support
+                    )
+                        | Login to Contact Support

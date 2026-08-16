@@ -139,10 +139,15 @@ html
                                 | My Profile
 
 
-                        a.logout-button(
-                            href="/logout"
+                        form.logout-form(
+                            action="/logout"
+                            method="POST"
                         )
-                            | Logout
+
+                            button.logout-button(
+                                type="submit"
+                            )
+                                | Logout
 
 
                     else
@@ -165,30 +170,41 @@ html
 
         if feedback
 
-            section.app-feedback
+            section(
+                class=`app-feedback app-feedback-${feedback.type || "info"}`
+                role="alert"
+            )
 
-                if feedback.type === "success"
+                .app-feedback-icon
 
-                    .app-feedback-icon.app-feedback-success-icon
+                    if feedback.type === "success"
                         | ✓
 
-                else
-
-                    .app-feedback-icon.app-feedback-error-icon
+                    else if feedback.type === "error"
                         | !
+
+                    else if feedback.type === "warning"
+                        | ⚠
+
+                    else
+                        | i
 
 
                 .app-feedback-content
 
-                    if feedback.type === "success"
+                    strong
 
-                        strong
+                        if feedback.type === "success"
                             | Success
 
-                    else
+                        else if feedback.type === "error"
+                            | Error
 
-                        strong
-                            | Something needs attention
+                        else if feedback.type === "warning"
+                            | Heads up
+
+                        else
+                            | Information
 
 
                     p

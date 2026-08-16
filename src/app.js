@@ -65,6 +65,19 @@ app.use((req, res, next) => {
     next();
 });
 
+//=====================================================
+// GLOBAL FEEDBACK MESSAGE FOR PUG VIEWS
+//=====================================================
+
+app.use((req, res, next) => {
+    res.locals.feedback =
+        req.session.feedback || null;
+
+    delete req.session.feedback;
+
+    next();
+});
+
 
 // --------------------------------------------------
 // MIDDLEWARE
