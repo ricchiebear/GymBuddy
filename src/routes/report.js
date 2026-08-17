@@ -1,4 +1,9 @@
 const express = require("express");
+
+const {
+    rateLimit
+} = require("express-rate-limit");
+
 const db = require("../config/database");
 
 const router = express.Router();
@@ -61,8 +66,64 @@ function requireLogin(
 }
 
 // =====================================================
+// REPORT RATE LIMIT
+//
+// Maximum:
+// 10 report submissions per logged-in user
+// every 60 minutes.
+// =====================================================
+
+const reportLimiter =
+    rateLimit({
+        windowMs:
+            60 * 60 * 1000,
+
+        limit:
+            10,
+
+        standardHeaders:
+            "draft-8",
+
+        legacyHeaders:
+            false,
+
+        keyGenerator:
+            (req) => {
+                return (
+                    `gymbuddy-report-user-${req.session.userId}`
+                );
+            },
+
+        handler:
+            (req, res) => {
+
+                const workoutId =
+                    getNumericId(
+                        req.params.id
+                    );
+
+                setFeedback(
+                    req,
+                    "warning",
+                    "You've submitted several reports recently. Please wait before submitting another report."
+                );
+
+                if (workoutId) {
+                    return res.redirect(
+                        `/workouts/${workoutId}`
+                    );
+                }
+
+                return res.redirect(
+                    "/workouts"
+                );
+            }
+    });
+
+// =====================================================
 // ALLOWED REPORT REASONS
 // =====================================================
+
 const allowedReportReasons = [
     "Spam or misleading content",
     "Unsafe activity",
@@ -83,7 +144,9 @@ router.get(
     "/workouts/:id/report",
     requireLogin,
     async (req, res) => {
+
         try {
+
             const workoutId =
                 getNumericId(
                     req.params.id
@@ -99,6 +162,7 @@ router.get(
             // =================================================
 
             if (!userId) {
+
                 req.session.destroy(
                     () => {}
                 );
@@ -113,6 +177,7 @@ router.get(
             // =================================================
 
             if (!workoutId) {
+
                 setFeedback(
                     req,
                     "warning",
@@ -146,6 +211,7 @@ router.get(
                 workoutRows.length ===
                 0
             ) {
+
                 setFeedback(
                     req,
                     "warning",
@@ -169,6 +235,7 @@ router.get(
                     workout.owner_id
                 ) === userId
             ) {
+
                 setFeedback(
                     req,
                     "warning",
@@ -197,6 +264,7 @@ router.get(
             );
 
         } catch (error) {
+
             console.error(
                 "REPORT WORKOUT PAGE ERROR:",
                 error
@@ -218,10 +286,13 @@ router.get(
 router.post(
     "/workouts/:id/report",
     requireLogin,
+    reportLimiter,
     async (req, res) => {
+
         let connection;
 
         try {
+
             const workoutId =
                 getNumericId(
                     req.params.id
@@ -245,6 +316,7 @@ router.post(
             // =================================================
 
             if (!reporterId) {
+
                 req.session.destroy(
                     () => {}
                 );
@@ -259,6 +331,7 @@ router.post(
             // =================================================
 
             if (!workoutId) {
+
                 setFeedback(
                     req,
                     "warning",
@@ -275,6 +348,7 @@ router.post(
             // =================================================
 
             if (!selectedReason) {
+
                 setFeedback(
                     req,
                     "warning",
@@ -291,6 +365,7 @@ router.post(
                     selectedReason
                 )
             ) {
+
                 setFeedback(
                     req,
                     "warning",
@@ -313,7 +388,9 @@ router.post(
                 selectedReason ===
                 "Other"
             ) {
+
                 if (!otherReason) {
+
                     setFeedback(
                         req,
                         "warning",
@@ -329,6 +406,7 @@ router.post(
                     otherReason.length >
                     1000
                 ) {
+
                     setFeedback(
                         req,
                         "warning",
@@ -374,6 +452,7 @@ router.post(
                 workoutRows.length ===
                 0
             ) {
+
                 await connection
                     .rollback();
 
@@ -400,6 +479,7 @@ router.post(
                     workout.owner_id
                 ) === reporterId
             ) {
+
                 await connection
                     .rollback();
 
@@ -438,6 +518,7 @@ router.post(
                 existingReports.length >
                 0
             ) {
+
                 await connection
                     .rollback();
 
@@ -495,13 +576,18 @@ router.post(
             );
 
         } catch (error) {
+
             if (connection) {
+
                 try {
+
                     await connection
                         .rollback();
+
                 } catch (
                     rollbackError
                 ) {
+
                     console.error(
                         "REPORT ROLLBACK ERROR:",
                         rollbackError
@@ -521,6 +607,7 @@ router.post(
                 );
 
         } finally {
+
             if (connection) {
                 connection.release();
             }

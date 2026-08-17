@@ -1,4 +1,9 @@
 const express = require("express");
+
+const {
+    rateLimit
+} = require("express-rate-limit");
+
 const db = require("../config/database");
 
 const router = express.Router();
@@ -59,6 +64,50 @@ function requireLogin(
 
     next();
 }
+
+// =====================================================
+// SUPPORT TICKET RATE LIMIT
+//
+// Maximum:
+// 5 support ticket submissions per logged-in user
+// every 60 minutes.
+// =====================================================
+
+const supportTicketLimiter =
+    rateLimit({
+        windowMs:
+            60 * 60 * 1000,
+
+        limit:
+            5,
+
+        standardHeaders:
+            "draft-8",
+
+        legacyHeaders:
+            false,
+
+        keyGenerator:
+            (req) => {
+                return (
+                    `gymbuddy-support-user-${req.session.userId}`
+                );
+            },
+
+        handler:
+            (req, res) => {
+
+                setFeedback(
+                    req,
+                    "warning",
+                    "You've submitted several support requests recently. Please wait before creating another ticket."
+                );
+
+                return res.redirect(
+                    "/support"
+                );
+            }
+    });
 
 // =====================================================
 // ALLOWED SUPPORT ISSUE TYPES
@@ -193,6 +242,7 @@ router.get(
 router.post(
     "/support",
     requireLogin,
+    supportTicketLimiter,
     async (req, res) => {
         try {
             const userId =
@@ -282,7 +332,7 @@ router.post(
 
             // =================================================
             // GET ACCOUNT EMAIL FROM DATABASE
-            // Do not trust the browser-submitted email value.
+            // Do not trust browser-submitted email data.
             // =================================================
 
             const [users] =

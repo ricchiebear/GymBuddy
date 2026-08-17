@@ -47,121 +47,144 @@ html
 
 
                 //=================================================
-                // NAVIGATION LINKS
+                // MOBILE MENU BUTTON
                 //=================================================
 
-                .navigation-links
+                button.mobile-menu-button(
+                    type="button"
+                    aria-label="Open navigation menu"
+                    aria-expanded="false"
+                    aria-controls="mobile-navigation-menu"
+                )
 
-                    a.nav-link(
-                        href="/"
-                    )
-
-                        span.nav-icon
-                            | 🏠
-
-                        span
-                            | Home
-
-
-                    if isLoggedIn
-
-                        a.nav-link(
-                            href="/workouts"
-                        )
-
-                            span.nav-icon
-                                | 🏋️
-
-                            span
-                                | Workouts
-
-
-                        a.nav-link(
-                            href="/recommendations"
-                        )
-
-                            span.nav-icon
-                                | 🤝
-
-                            span
-                                | Recommendations
-
-
-                        a.nav-link(
-                            href="/ai-coach"
-                        )
-
-                            span.nav-icon
-                                | 🤖
-
-                            span
-                                | AI Coach
-
-
-                        a.nav-link(
-                            href="/messages"
-                        )
-
-                            span.nav-icon
-                                | 💬
-
-                            span
-                                | Messages
-
-
-                        a.nav-link(
-                            href="/notifications"
-                        )
-
-                            span.nav-icon
-                                | 🔔
-
-                            span
-                                | Notifications
+                    span.mobile-menu-icon
+                        | ☰
 
 
                 //=================================================
-                // ACCOUNT AREA
+                // NAVIGATION CONTENT
                 //=================================================
 
-                .navigation-account
+                .navigation-menu(
+                    id="mobile-navigation-menu"
+                )
 
-                    if isLoggedIn
+                    //=================================================
+                    // NAVIGATION LINKS
+                    //=================================================
 
-                        a.profile-nav-link(
-                            href="/profile"
+                    .navigation-links
+
+                        a.nav-link(
+                            href="/"
                         )
 
-                            span.profile-nav-icon
-                                | 👤
+                            span.nav-icon
+                                | 🏠
 
                             span
-                                | My Profile
+                                | Home
 
 
-                        form.logout-form(
-                            action="/logout"
-                            method="POST"
-                        )
+                        if isLoggedIn
 
-                            button.logout-button(
-                                type="submit"
+                            a.nav-link(
+                                href="/workouts"
                             )
-                                | Logout
+
+                                span.nav-icon
+                                    | 🏋️
+
+                                span
+                                    | Workouts
 
 
-                    else
+                            a.nav-link(
+                                href="/recommendations"
+                            )
 
-                        a.register-nav-link(
-                            href="/register"
-                        )
-                            | Register
+                                span.nav-icon
+                                    | 🤝
+
+                                span
+                                    | Recommendations
 
 
-                        a.login-nav-link(
-                            href="/login"
-                        )
-                            | Login
+                            a.nav-link(
+                                href="/ai-coach"
+                            )
+
+                                span.nav-icon
+                                    | 🤖
+
+                                span
+                                    | AI Coach
+
+
+                            a.nav-link(
+                                href="/messages"
+                            )
+
+                                span.nav-icon
+                                    | 💬
+
+                                span
+                                    | Messages
+
+
+                            a.nav-link(
+                                href="/notifications"
+                            )
+
+                                span.nav-icon
+                                    | 🔔
+
+                                span
+                                    | Notifications
+
+
+                    //=================================================
+                    // ACCOUNT AREA
+                    //=================================================
+
+                    .navigation-account
+
+                        if isLoggedIn
+
+                            a.profile-nav-link(
+                                href="/profile"
+                            )
+
+                                span.profile-nav-icon
+                                    | 👤
+
+                                span
+                                    | My Profile
+
+
+                            form.logout-form(
+                                action="/logout"
+                                method="POST"
+                            )
+
+                                button.logout-button(
+                                    type="submit"
+                                )
+                                    | Logout
+
+
+                        else
+
+                            a.register-nav-link(
+                                href="/register"
+                            )
+                                | Register
+
+
+                            a.login-nav-link(
+                                href="/login"
+                            )
+                                | Login
 
 
         //=====================================================
@@ -238,3 +261,55 @@ html
                         href="/support"
                     )
                         | Help & Support
+
+
+        //=====================================================
+        // MOBILE NAVIGATION SCRIPT
+        //=====================================================
+
+        script.
+            document.addEventListener("DOMContentLoaded", () => {
+                const menuButton =
+                    document.querySelector(
+                        ".mobile-menu-button"
+                    );
+
+                const navigationMenu =
+                    document.querySelector(
+                        ".navigation-menu"
+                    );
+
+                if (
+                    !menuButton ||
+                    !navigationMenu
+                ) {
+                    return;
+                }
+
+                menuButton.addEventListener(
+                    "click",
+                    () => {
+                        const isOpen =
+                            navigationMenu.classList.toggle(
+                                "navigation-menu-open"
+                            );
+
+                        menuButton.setAttribute(
+                            "aria-expanded",
+                            String(isOpen)
+                        );
+
+                        const icon =
+                            menuButton.querySelector(
+                                ".mobile-menu-icon"
+                            );
+
+                        if (icon) {
+                            icon.textContent =
+                                isOpen
+                                    ? "✕"
+                                    : "☰";
+                        }
+                    }
+                );
+            });

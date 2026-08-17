@@ -1,5 +1,10 @@
 const express = require("express");
 const OpenAI = require("openai");
+
+const {
+    rateLimit
+} = require("express-rate-limit");
+
 const db = require("../config/database");
 
 const {
@@ -22,6 +27,12 @@ const openai = new OpenAI({
 
 const MAX_USER_MESSAGE_LENGTH = 2000;
 const MAX_CONVERSATION_HISTORY = 20;
+
+const AI_RATE_LIMIT_WINDOW =
+    15 * 60 * 1000;
+
+const AI_RATE_LIMIT_REQUESTS =
+    20;
 
 // =====================================================
 // FEEDBACK HELPER
@@ -79,6 +90,67 @@ function requireLogin(
 
     next();
 }
+
+// =====================================================
+// AI COACH RATE LIMIT
+//
+// Maximum:
+// 20 AI Coach submissions per logged-in GymBuddy
+// account every 15 minutes.
+//
+// This helps prevent:
+// - automated AI request spam
+// - excessive OpenAI API usage
+// - accidental rapid repeated submissions
+// =====================================================
+
+const aiCoachLimiter =
+    rateLimit({
+        windowMs:
+            AI_RATE_LIMIT_WINDOW,
+
+        limit:
+            AI_RATE_LIMIT_REQUESTS,
+
+        standardHeaders:
+            "draft-8",
+
+        legacyHeaders:
+            false,
+
+        keyGenerator:
+            (req) => {
+                return (
+                    `gymbuddy-ai-user-${req.session.userId}`
+                );
+            },
+
+        handler:
+            (req, res) => {
+
+                const conversationId =
+                    getNumericId(
+                        req.body
+                            ?.conversation_id
+                    );
+
+                setFeedback(
+                    req,
+                    "warning",
+                    "You've sent several AI Coach messages in a short time. Please wait a few minutes before sending another message."
+                );
+
+                if (conversationId) {
+                    return res.redirect(
+                        `/ai-coach/conversations/${conversationId}`
+                    );
+                }
+
+                return res.redirect(
+                    "/ai-coach"
+                );
+            }
+    });
 
 // =====================================================
 // LOAD USER AI CONVERSATIONS
@@ -542,6 +614,7 @@ async function loadGymBuddyContext(
                         partner,
                         index
                     ) => {
+
                         const reasons =
                             Array.isArray(
                                 partner.matchReasons
@@ -650,6 +723,7 @@ async function renderAiCoach(
         );
 
     if (!conversationId) {
+
         if (
             conversations.length ===
             0
@@ -722,7 +796,9 @@ router.get(
     "/ai-coach",
     requireLogin,
     async (req, res) => {
+
         try {
+
             const userId =
                 getNumericId(
                     req.session.userId
@@ -733,6 +809,7 @@ router.get(
             // =================================================
 
             if (!userId) {
+
                 req.session.destroy(
                     () => {}
                 );
@@ -748,6 +825,7 @@ router.get(
             );
 
         } catch (error) {
+
             console.error(
                 "AI COACH PAGE ERROR:",
                 error
@@ -770,7 +848,9 @@ router.get(
     "/ai-coach/conversations/:id",
     requireLogin,
     async (req, res) => {
+
         try {
+
             const userId =
                 getNumericId(
                     req.session.userId
@@ -786,6 +866,7 @@ router.get(
             // =================================================
 
             if (!userId) {
+
                 req.session.destroy(
                     () => {}
                 );
@@ -800,6 +881,7 @@ router.get(
             // =================================================
 
             if (!conversationId) {
+
                 setFeedback(
                     req,
                     "warning",
@@ -822,6 +904,7 @@ router.get(
                 );
 
             if (!conversation) {
+
                 setFeedback(
                     req,
                     "warning",
@@ -840,6 +923,7 @@ router.get(
             );
 
         } catch (error) {
+
             console.error(
                 "VIEW AI CONVERSATION ERROR:",
                 error
@@ -862,13 +946,16 @@ router.post(
     "/ai-coach/new",
     requireLogin,
     async (req, res) => {
+
         try {
+
             const userId =
                 getNumericId(
                     req.session.userId
                 );
 
             if (!userId) {
+
                 req.session.destroy(
                     () => {}
                 );
@@ -908,6 +995,7 @@ router.post(
             );
 
         } catch (error) {
+
             console.error(
                 "NEW AI CONVERSATION ERROR:",
                 error
@@ -932,11 +1020,21 @@ router.post(
 
 router.post(
     "/ai-coach",
+
+    // Authentication must run before the limiter
+    // because the limiter uses req.session.userId.
     requireLogin,
+
+    // Protect OpenAI API usage from rapid requests.
+    aiCoachLimiter,
+
     async (req, res) => {
-        let conversationId = null;
+
+        let conversationId =
+            null;
 
         try {
+
             const userId =
                 getNumericId(
                     req.session.userId
@@ -948,7 +1046,8 @@ router.post(
 
             conversationId =
                 getNumericId(
-                    req.body.conversation_id
+                    req.body
+                        .conversation_id
                 );
 
             // =================================================
@@ -956,6 +1055,7 @@ router.post(
             // =================================================
 
             if (!userId) {
+
                 req.session.destroy(
                     () => {}
                 );
@@ -970,6 +1070,7 @@ router.post(
             // =================================================
 
             if (!userMessage) {
+
                 setFeedback(
                     req,
                     "warning",
@@ -977,6 +1078,7 @@ router.post(
                 );
 
                 if (conversationId) {
+
                     return res.redirect(
                         `/ai-coach/conversations/${conversationId}`
                     );
@@ -991,6 +1093,7 @@ router.post(
                 userMessage.length >
                 MAX_USER_MESSAGE_LENGTH
             ) {
+
                 setFeedback(
                     req,
                     "warning",
@@ -998,6 +1101,7 @@ router.post(
                 );
 
                 if (conversationId) {
+
                     return res.redirect(
                         `/ai-coach/conversations/${conversationId}`
                     );
@@ -1016,6 +1120,7 @@ router.post(
                 null;
 
             if (conversationId) {
+
                 conversation =
                     await loadConversation(
                         conversationId,
@@ -1023,6 +1128,7 @@ router.post(
                     );
 
                 if (!conversation) {
+
                     setFeedback(
                         req,
                         "warning",
@@ -1040,8 +1146,10 @@ router.post(
             // =================================================
 
             if (!conversation) {
+
                 const title =
-                    userMessage.length > 60
+                    userMessage.length >
+                    60
                         ? `${userMessage.slice(
                             0,
                             57
@@ -1129,6 +1237,7 @@ router.post(
             if (
                 !process.env.OPENAI_API_KEY
             ) {
+
                 setFeedback(
                     req,
                     "error",
@@ -1150,6 +1259,7 @@ router.post(
                 );
 
             if (!gymBuddyContext) {
+
                 req.session.destroy(
                     () => {}
                 );
@@ -1231,6 +1341,7 @@ ${gymBuddyContext}
             let response;
 
             try {
+
                 response =
                     await openai.responses.create({
                         model:
@@ -1299,6 +1410,7 @@ FITNESS SAFETY:
                     });
 
             } catch (apiError) {
+
                 console.error(
                     "OPENAI AI COACH ERROR:",
                     apiError
@@ -1308,16 +1420,18 @@ FITNESS SAFETY:
                     apiError.status ===
                     429
                 ) {
+
                     setFeedback(
                         req,
                         "warning",
-                        "The AI Coach is temporarily unavailable because its usage limit has been reached. Please try again later."
+                        "The AI Coach is temporarily unavailable because its API usage limit has been reached. Please try again later."
                     );
 
                 } else if (
                     apiError.status ===
                     401
                 ) {
+
                     setFeedback(
                         req,
                         "error",
@@ -1325,6 +1439,7 @@ FITNESS SAFETY:
                     );
 
                 } else {
+
                     setFeedback(
                         req,
                         "error",
@@ -1346,6 +1461,7 @@ FITNESS SAFETY:
                     ?.trim();
 
             if (!aiResponse) {
+
                 setFeedback(
                     req,
                     "warning",
@@ -1402,6 +1518,7 @@ FITNESS SAFETY:
             );
 
         } catch (error) {
+
             console.error(
                 "GYMBUDDY AI COACH ERROR:",
                 error
@@ -1414,6 +1531,7 @@ FITNESS SAFETY:
             );
 
             if (conversationId) {
+
                 return res.redirect(
                     `/ai-coach/conversations/${conversationId}`
                 );

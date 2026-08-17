@@ -1,10 +1,18 @@
 const express = require("express");
+const rateLimit = require("express-rate-limit");
+
 const db = require("../config/database");
 const formatDate = require("../utils/formatDate");
 const createNotification =
     require("../utils/createNotification");
 
 const router = express.Router();
+
+// =====================================================
+// CONFIGURATION
+// =====================================================
+
+const MAX_MESSAGE_LENGTH = 2000;
 
 // =====================================================
 // FEEDBACK HELPER
@@ -64,6 +72,92 @@ function requireLogin(
 }
 
 // =====================================================
+// MESSAGE RATE LIMITER
+//
+// Protects users from message flooding.
+//
+// Logged-in users are limited using their GymBuddy
+// account ID rather than only their IP address.
+// =====================================================
+
+const messageRateLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 20,
+
+    standardHeaders: true,
+    legacyHeaders: false,
+
+    keyGenerator: (req) => {
+        return `user:${req.session.userId}`;
+    },
+
+    handler: (req, res) => {
+        const receiverId =
+            getNumericId(
+                req.params.userId
+            );
+
+        setFeedback(
+            req,
+            "warning",
+            "You're sending messages too quickly. Please wait a moment before sending another message."
+        );
+
+        if (receiverId) {
+            return res.redirect(
+                `/messages/${receiverId}`
+            );
+        }
+
+        return res.redirect(
+            "/messages"
+        );
+    }
+});
+
+// =====================================================
+// MESSAGE REQUEST RATE LIMITER
+//
+// Prevents one account from rapidly sending message
+// requests to large numbers of GymBuddy users.
+// =====================================================
+
+const messageRequestRateLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: 10,
+
+    standardHeaders: true,
+    legacyHeaders: false,
+
+    keyGenerator: (req) => {
+        return `user:${req.session.userId}`;
+    },
+
+    handler: (req, res) => {
+        const receiverId =
+            getNumericId(
+                req.params.userId
+            );
+
+        setFeedback(
+            req,
+            "warning",
+            "You've sent several message requests recently. Please wait before sending more."
+        );
+
+        if (receiverId) {
+            return res.redirect(
+                `/messages/${receiverId}`
+            );
+        }
+
+        return res.redirect(
+            "/messages"
+        );
+    }
+});
+
+// =====================================================
 // CHECK WHETHER TWO USERS CAN MESSAGE DIRECTLY
 // =====================================================
 
@@ -72,7 +166,6 @@ async function usersCanMessageDirectly(
     userTwoId,
     queryRunner = db
 ) {
-
     // =================================================
     // SHARED WORKOUT RELATIONSHIP
     // =================================================
@@ -107,14 +200,12 @@ async function usersCanMessageDirectly(
             ]
         );
 
-
     if (
         sharedWorkoutRows.length >
         0
     ) {
         return true;
     }
-
 
     // =================================================
     // ACCEPTED MESSAGE REQUEST
@@ -148,11 +239,76 @@ async function usersCanMessageDirectly(
             ]
         );
 
-
     return (
         acceptedRequestRows.length >
         0
     );
+}
+
+// =====================================================
+// CHECK MESSAGE REQUEST RATE LIMIT
+//
+// We only apply the message-request limiter when the
+// users cannot already message each other directly.
+// This means normal private conversations do not consume
+// the message-request allowance.
+// =====================================================
+
+async function applyMessageProtection(
+    req,
+    res,
+    next
+) {
+    try {
+        const senderId =
+            getNumericId(
+                req.session.userId
+            );
+
+        const receiverId =
+            getNumericId(
+                req.params.userId
+            );
+
+        if (
+            !senderId ||
+            !receiverId
+        ) {
+            return next();
+        }
+
+        const canMessage =
+            await usersCanMessageDirectly(
+                senderId,
+                receiverId
+            );
+
+        if (canMessage) {
+            return messageRateLimiter(
+                req,
+                res,
+                next
+            );
+        }
+
+        return messageRequestRateLimiter(
+            req,
+            res,
+            next
+        );
+
+    } catch (error) {
+        console.error(
+            "MESSAGE PROTECTION ERROR:",
+            error
+        );
+
+        return res
+            .status(500)
+            .send(
+                "Unable to process message request."
+            );
+    }
 }
 
 // =====================================================
@@ -163,31 +319,25 @@ router.get(
     "/messages",
     requireLogin,
     async (req, res) => {
-
         try {
-
             const userId =
                 getNumericId(
                     req.session.userId
                 );
-
 
             // =================================================
             // VALIDATE SESSION USER
             // =================================================
 
             if (!userId) {
-
                 req.session.destroy(
                     () => {}
                 );
-
 
                 return res.redirect(
                     "/login"
                 );
             }
-
 
             // =================================================
             // GET MESSAGE HISTORY
@@ -243,7 +393,6 @@ router.get(
                     ]
                 );
 
-
             // =================================================
             // KEEP LATEST MESSAGE PER CONVERSATION
             // =================================================
@@ -251,17 +400,14 @@ router.get(
             const conversationMap =
                 new Map();
 
-
             for (
                 const message
                 of messageRows
             ) {
-
                 const partnerId =
                     getNumericId(
                         message.partner_id
                     );
-
 
                 if (
                     !partnerId ||
@@ -271,7 +417,6 @@ router.get(
                 ) {
                     continue;
                 }
-
 
                 conversationMap.set(
                     partnerId,
@@ -286,12 +431,10 @@ router.get(
                 );
             }
 
-
             const conversations =
                 Array.from(
                     conversationMap.values()
                 );
-
 
             // =================================================
             // USERS AVAILABLE TO START A CONVERSATION WITH
@@ -312,7 +455,6 @@ router.get(
                     [userId]
                 );
 
-
             // =================================================
             // PENDING MESSAGE REQUEST COUNT
             // =================================================
@@ -327,7 +469,6 @@ router.get(
                            'pending'`,
                     [userId]
                 );
-
 
             // =================================================
             // RENDER
@@ -352,12 +493,10 @@ router.get(
             );
 
         } catch (error) {
-
             console.error(
                 "MESSAGES PAGE ERROR:",
                 error
             );
-
 
             return res
                 .status(500)
@@ -376,74 +515,61 @@ router.get(
     "/messages/:userId",
     requireLogin,
     async (req, res) => {
-
         try {
-
             const currentUserId =
                 getNumericId(
                     req.session.userId
                 );
-
 
             const partnerId =
                 getNumericId(
                     req.params.userId
                 );
 
-
             // =================================================
             // VALIDATE SESSION
             // =================================================
 
             if (!currentUserId) {
-
                 req.session.destroy(
                     () => {}
                 );
-
 
                 return res.redirect(
                     "/login"
                 );
             }
 
-
             // =================================================
             // VALIDATE CHAT PARTNER
             // =================================================
 
             if (!partnerId) {
-
                 setFeedback(
                     req,
                     "warning",
                     "That chat partner could not be found."
                 );
 
-
                 return res.redirect(
                     "/messages"
                 );
             }
 
-
             if (
                 currentUserId ===
                 partnerId
             ) {
-
                 setFeedback(
                     req,
                     "warning",
                     "You cannot message yourself."
                 );
 
-
                 return res.redirect(
                     "/messages"
                 );
             }
-
 
             // =================================================
             // FIND CHAT PARTNER
@@ -462,28 +588,23 @@ router.get(
                     [partnerId]
                 );
 
-
             if (
                 partnerRows.length ===
                 0
             ) {
-
                 setFeedback(
                     req,
                     "warning",
                     "That GymBuddy user could not be found."
                 );
 
-
                 return res.redirect(
                     "/messages"
                 );
             }
 
-
             const partner =
                 partnerRows[0];
-
 
             // =================================================
             // CHECK DIRECT MESSAGE PERMISSION
@@ -495,17 +616,14 @@ router.get(
                     partnerId
                 );
 
-
             let requestStatus =
                 null;
-
 
             // =================================================
             // FIND CURRENT MESSAGE REQUEST STATUS
             // =================================================
 
             if (!canMessage) {
-
                 const [requestRows] =
                     await db.query(
                         `SELECT
@@ -535,7 +653,6 @@ router.get(
                         ]
                     );
 
-
                 if (
                     requestRows.length >
                     0
@@ -549,16 +666,13 @@ router.get(
                 }
             }
 
-
             let messages = [];
-
 
             // =================================================
             // LOAD PRIVATE MESSAGES
             // =================================================
 
             if (canMessage) {
-
                 const [messageRows] =
                     await db.query(
                         `SELECT
@@ -605,7 +719,6 @@ router.get(
                         ]
                     );
 
-
                 messages =
                     messageRows.map(
                         (message) => ({
@@ -617,7 +730,6 @@ router.get(
                                 )
                         })
                     );
-
 
                 // =================================================
                 // MARK RECEIVED MESSAGES AS READ
@@ -635,7 +747,6 @@ router.get(
                     ]
                 );
             }
-
 
             // =================================================
             // RENDER PRIVATE CHAT
@@ -660,12 +771,10 @@ router.get(
             );
 
         } catch (error) {
-
             console.error(
                 "PRIVATE CHAT PAGE ERROR:",
                 error
             );
-
 
             return res
                 .status(500)
@@ -683,101 +792,100 @@ router.get(
 router.post(
     "/messages/:userId",
     requireLogin,
+    applyMessageProtection,
     async (req, res) => {
-
         let connection;
 
         try {
-
             const senderId =
                 getNumericId(
                     req.session.userId
                 );
-
 
             const receiverId =
                 getNumericId(
                     req.params.userId
                 );
 
-
             const message =
                 req.body.message
                     ?.trim();
-
 
             // =================================================
             // VALIDATE SESSION
             // =================================================
 
             if (!senderId) {
-
                 req.session.destroy(
                     () => {}
                 );
-
 
                 return res.redirect(
                     "/login"
                 );
             }
 
-
             // =================================================
             // VALIDATE RECEIVER
             // =================================================
 
             if (!receiverId) {
-
                 setFeedback(
                     req,
                     "warning",
                     "That message receiver could not be found."
                 );
 
-
                 return res.redirect(
                     "/messages"
                 );
             }
 
-
             if (
                 senderId ===
                 receiverId
             ) {
-
                 setFeedback(
                     req,
                     "warning",
                     "You cannot message yourself."
                 );
 
-
                 return res.redirect(
                     "/messages"
                 );
             }
-
 
             // =================================================
             // VALIDATE MESSAGE
             // =================================================
 
             if (!message) {
-
                 setFeedback(
                     req,
                     "warning",
                     "Please enter a message."
                 );
 
-
                 return res.redirect(
                     `/messages/${receiverId}`
                 );
             }
 
+            if (
+                message.length >
+                MAX_MESSAGE_LENGTH
+            ) {
+                setFeedback(
+                    req,
+                    "warning",
+                    `Messages cannot be longer than ${MAX_MESSAGE_LENGTH} characters.`
+                );
+
+                return res.redirect(
+                    `/messages/${receiverId}`
+                );
+            }
 
             // =================================================
             // START TRANSACTION
@@ -786,10 +894,8 @@ router.post(
             connection =
                 await db.getConnection();
 
-
             await connection
                 .beginTransaction();
-
 
             // =================================================
             // CONFIRM RECEIVER EXISTS
@@ -807,15 +913,12 @@ router.post(
                     [receiverId]
                 );
 
-
             if (
                 receiverRows.length ===
                 0
             ) {
-
                 await connection
                     .rollback();
-
 
                 setFeedback(
                     req,
@@ -823,12 +926,10 @@ router.post(
                     "That GymBuddy user could not be found."
                 );
 
-
                 return res.redirect(
                     "/messages"
                 );
             }
-
 
             // =================================================
             // CHECK DIRECT MESSAGE PERMISSION
@@ -841,18 +942,15 @@ router.post(
                     connection
                 );
 
-
             const senderName =
                 req.session.userName ||
                 "Someone";
-
 
             // =================================================
             // DIRECT MESSAGE
             // =================================================
 
             if (canMessage) {
-
                 await connection.query(
                     `INSERT INTO messages
                      (
@@ -869,7 +967,6 @@ router.post(
                     ]
                 );
 
-
                 await createNotification(
                     receiverId,
                     `${senderName} sent you a private message.`,
@@ -877,16 +974,13 @@ router.post(
                     connection
                 );
 
-
                 await connection
                     .commit();
-
 
                 return res.redirect(
                     `/messages/${receiverId}`
                 );
             }
-
 
             // =================================================
             // CHECK EXISTING MESSAGE REQUEST
@@ -909,19 +1003,16 @@ router.post(
                     ]
                 );
 
-
             if (
                 existingRequestRows.length >
                 0
             ) {
-
                 const existingStatus =
                     String(
                         existingRequestRows[0]
                             .status ||
                         ""
                     ).toLowerCase();
-
 
                 // =============================================
                 // PENDING REQUEST
@@ -931,10 +1022,8 @@ router.post(
                     existingStatus ===
                     "pending"
                 ) {
-
                     await connection
                         .rollback();
-
 
                     setFeedback(
                         req,
@@ -942,12 +1031,10 @@ router.post(
                         "You already have a pending message request for this user."
                     );
 
-
                     return res.redirect(
                         `/messages/${receiverId}`
                     );
                 }
-
 
                 // =============================================
                 // ACCEPTED REQUEST
@@ -957,10 +1044,8 @@ router.post(
                     existingStatus ===
                     "accepted"
                 ) {
-
                     await connection
                         .rollback();
-
 
                     setFeedback(
                         req,
@@ -968,12 +1053,10 @@ router.post(
                         "Your message request has already been accepted. You can message this user directly."
                     );
 
-
                     return res.redirect(
                         `/messages/${receiverId}`
                     );
                 }
-
 
                 // =============================================
                 // REJECTED REQUEST
@@ -983,10 +1066,8 @@ router.post(
                     existingStatus ===
                     "rejected"
                 ) {
-
                     await connection
                         .rollback();
-
 
                     setFeedback(
                         req,
@@ -994,13 +1075,11 @@ router.post(
                         "Your previous message request to this user was rejected."
                     );
 
-
                     return res.redirect(
                         `/messages/${receiverId}`
                     );
                 }
             }
-
 
             // =================================================
             // CHECK REVERSE PENDING REQUEST
@@ -1022,15 +1101,12 @@ router.post(
                     ]
                 );
 
-
             if (
                 reverseRequestRows.length >
                 0
             ) {
-
                 await connection
                     .rollback();
-
 
                 setFeedback(
                     req,
@@ -1038,12 +1114,10 @@ router.post(
                     "This user has already sent you a message request. Open Message Requests to respond."
                 );
 
-
                 return res.redirect(
                     "/message-requests"
                 );
             }
-
 
             // =================================================
             // CREATE MESSAGE REQUEST
@@ -1065,7 +1139,6 @@ router.post(
                 ]
             );
 
-
             await createNotification(
                 receiverId,
                 `${senderName} sent you a message request.`,
@@ -1073,10 +1146,8 @@ router.post(
                 connection
             );
 
-
             await connection
                 .commit();
-
 
             setFeedback(
                 req,
@@ -1084,24 +1155,19 @@ router.post(
                 "Message request sent successfully."
             );
 
-
             return res.redirect(
                 `/messages/${receiverId}`
             );
 
         } catch (error) {
-
             if (connection) {
-
                 try {
-
                     await connection
                         .rollback();
 
                 } catch (
                     rollbackError
                 ) {
-
                     console.error(
                         "MESSAGE ROLLBACK ERROR:",
                         rollbackError
@@ -1109,12 +1175,10 @@ router.post(
                 }
             }
 
-
             console.error(
                 "SEND PRIVATE MESSAGE ERROR:",
                 error
             );
-
 
             return res
                 .status(500)
@@ -1123,7 +1187,6 @@ router.post(
                 );
 
         } finally {
-
             if (connection) {
                 connection.release();
             }
