@@ -24,6 +24,20 @@ const MAX_FITNESS_GOAL_LENGTH = 100;
 const MAX_PROFILE_BIO_LENGTH = 1000;
 const MAX_PASSWORD_LENGTH = 128;
 
+const MAX_PROFILE_IMAGE_SIZE =
+    10 * 1024 * 1024;
+
+// =====================================================
+// ALLOWED FITNESS GOALS
+// =====================================================
+
+const allowedFitnessGoals = new Set([
+    "lose_weight",
+    "build_muscle",
+    "improve_endurance",
+    "general_fitness"
+]);
+
 // =====================================================
 // FEEDBACK + FORM DATA HELPERS
 // =====================================================
@@ -63,9 +77,6 @@ function consumeFormData(
 // AUTHENTICATION RATE LIMITERS
 // =====================================================
 
-// Maximum:
-// 10 login POST attempts per IP every 15 minutes.
-
 const loginLimiter =
     rateLimit({
         windowMs:
@@ -94,9 +105,6 @@ const loginLimiter =
                 );
             }
     });
-
-// Maximum:
-// 5 registration POST attempts per IP every hour.
 
 const registrationLimiter =
     rateLimit({
@@ -143,6 +151,59 @@ function getNumericId(
     )
         ? id
         : null;
+}
+
+// =====================================================
+// STRING INPUT VALIDATION
+// =====================================================
+
+function isStringInput(
+    value
+) {
+    return (
+        typeof value ===
+        "string"
+    );
+}
+
+// =====================================================
+// EMAIL VALIDATION
+// =====================================================
+
+function isValidBuddyEmail(
+    email
+) {
+    if (
+        !isStringInput(
+            email
+        )
+    ) {
+        return false;
+    }
+
+    const emailRegex =
+        /^[^\s@]+@buddy\.co\.uk$/i;
+
+    return emailRegex.test(
+        email
+    );
+}
+
+// =====================================================
+// FITNESS GOAL VALIDATION
+// =====================================================
+
+function isValidFitnessGoal(
+    value
+) {
+    return (
+        isStringInput(
+            value
+        ) &&
+        allowedFitnessGoals.has(
+            value
+        )
+    );
 }
 
 // =====================================================
@@ -254,9 +315,7 @@ const upload =
 
         limits: {
             fileSize:
-                10 *
-                1024 *
-                1024
+                MAX_PROFILE_IMAGE_SIZE
         },
 
         fileFilter:
@@ -360,6 +419,258 @@ function uploadProfilePicture(
 }
 
 // =====================================================
+// IMAGE FILE SIGNATURE HELPERS
+// =====================================================
+
+function bufferStartsWith(
+    buffer,
+    bytes
+) {
+    if (
+        !Buffer.isBuffer(
+            buffer
+        ) ||
+        buffer.length <
+            bytes.length
+    ) {
+        return false;
+    }
+
+    return bytes.every(
+        (
+            byte,
+            index
+        ) =>
+            buffer[index] ===
+            byte
+    );
+}
+
+// =====================================================
+// JPEG SIGNATURE
+// =====================================================
+
+function isJpegBuffer(
+    buffer
+) {
+    return bufferStartsWith(
+        buffer,
+        [
+            0xff,
+            0xd8,
+            0xff
+        ]
+    );
+}
+
+// =====================================================
+// PNG SIGNATURE
+// =====================================================
+
+function isPngBuffer(
+    buffer
+) {
+    return bufferStartsWith(
+        buffer,
+        [
+            0x89,
+            0x50,
+            0x4e,
+            0x47,
+            0x0d,
+            0x0a,
+            0x1a,
+            0x0a
+        ]
+    );
+}
+
+// =====================================================
+// WEBP SIGNATURE
+// =====================================================
+
+function isWebpBuffer(
+    buffer
+) {
+    if (
+        !Buffer.isBuffer(
+            buffer
+        ) ||
+        buffer.length < 12
+    ) {
+        return false;
+    }
+
+    const riff =
+        buffer
+            .subarray(
+                0,
+                4
+            )
+            .toString(
+                "ascii"
+            );
+
+    const webp =
+        buffer
+            .subarray(
+                8,
+                12
+            )
+            .toString(
+                "ascii"
+            );
+
+    return (
+        riff ===
+            "RIFF" &&
+        webp ===
+            "WEBP"
+    );
+}
+
+// =====================================================
+// HEIC / HEIF SIGNATURE
+// =====================================================
+
+function isHeicOrHeifBuffer(
+    buffer
+) {
+    if (
+        !Buffer.isBuffer(
+            buffer
+        ) ||
+        buffer.length < 12
+    ) {
+        return false;
+    }
+
+    const fileType =
+        buffer
+            .subarray(
+                4,
+                8
+            )
+            .toString(
+                "ascii"
+            );
+
+    if (
+        fileType !==
+        "ftyp"
+    ) {
+        return false;
+    }
+
+    const brand =
+        buffer
+            .subarray(
+                8,
+                12
+            )
+            .toString(
+                "ascii"
+            )
+            .toLowerCase();
+
+    const acceptedBrands =
+        new Set([
+            "heic",
+            "heix",
+            "hevc",
+            "hevx",
+            "mif1",
+            "msf1"
+        ]);
+
+    return acceptedBrands.has(
+        brand
+    );
+}
+
+// =====================================================
+// VALIDATE ACTUAL PROFILE IMAGE CONTENT
+// =====================================================
+
+function isValidProfileImageContent(
+    file
+) {
+    if (
+        !file ||
+        !Buffer.isBuffer(
+            file.buffer
+        )
+    ) {
+        return false;
+    }
+
+    const extension =
+        path
+            .extname(
+                file.originalname
+            )
+            .toLowerCase();
+
+    if (
+        extension === ".jpg" ||
+        extension === ".jpeg"
+    ) {
+        return (
+            file.mimetype ===
+                "image/jpeg" &&
+            isJpegBuffer(
+                file.buffer
+            )
+        );
+    }
+
+    if (
+        extension ===
+        ".png"
+    ) {
+        return (
+            file.mimetype ===
+                "image/png" &&
+            isPngBuffer(
+                file.buffer
+            )
+        );
+    }
+
+    if (
+        extension ===
+        ".webp"
+    ) {
+        return (
+            file.mimetype ===
+                "image/webp" &&
+            isWebpBuffer(
+                file.buffer
+            )
+        );
+    }
+
+    if (
+        extension === ".heic" ||
+        extension === ".heif"
+    ) {
+        return (
+            (
+                file.mimetype ===
+                    "image/heic" ||
+                file.mimetype ===
+                    "image/heif"
+            ) &&
+            isHeicOrHeifBuffer(
+                file.buffer
+            )
+        );
+    }
+
+    return false;
+}
+
+// =====================================================
 // SAVE PROFILE PICTURE
 // =====================================================
 
@@ -368,6 +679,16 @@ async function saveProfilePicture(
 ) {
     if (!file) {
         return null;
+    }
+
+    if (
+        !isValidProfileImageContent(
+            file
+        )
+    ) {
+        throw new Error(
+            "INVALID_PROFILE_IMAGE_CONTENT"
+        );
     }
 
     const originalExtension =
@@ -381,11 +702,7 @@ async function saveProfilePicture(
         originalExtension ===
             ".heic" ||
         originalExtension ===
-            ".heif" ||
-        file.mimetype ===
-            "image/heic" ||
-        file.mimetype ===
-            "image/heif";
+            ".heif";
 
     const uniqueBaseName =
         `${Date.now()}-${Math.round(
@@ -441,15 +758,8 @@ async function saveProfilePicture(
     // JPG / PNG / WEBP
     // =================================================
 
-    const safeExtension =
-        allowedExtensions.includes(
-            originalExtension
-        )
-            ? originalExtension
-            : ".jpg";
-
     const filename =
-        `${uniqueBaseName}${safeExtension}`;
+        `${uniqueBaseName}${originalExtension}`;
 
     const destination =
         path.join(
@@ -609,26 +919,62 @@ router.post(
                 profile_bio
             } = req.body;
 
+            // =================================================
+            // EXPECTED INPUT TYPES
+            // =================================================
+
+            if (
+                !isStringInput(
+                    first_name
+                ) ||
+                !isStringInput(
+                    last_name
+                ) ||
+                !isStringInput(
+                    email
+                ) ||
+                !isStringInput(
+                    password
+                ) ||
+                !isStringInput(
+                    confirm_password
+                ) ||
+                !isStringInput(
+                    fitness_goal
+                ) ||
+                (
+                    profile_bio !==
+                        undefined &&
+                    !isStringInput(
+                        profile_bio
+                    )
+                )
+            ) {
+
+                setFeedback(
+                    req,
+                    "error",
+                    "Invalid registration information was submitted."
+                );
+
+                return res.redirect(
+                    "/register"
+                );
+            }
+
             const cleanFirstName =
-                first_name
-                    ?.trim() ||
-                "";
+                first_name.trim();
 
             const cleanLastName =
-                last_name
-                    ?.trim() ||
-                "";
+                last_name.trim();
 
             const cleanEmail =
                 email
-                    ?.trim()
-                    .toLowerCase() ||
-                "";
+                    .trim()
+                    .toLowerCase();
 
             const cleanFitnessGoal =
-                fitness_goal
-                    ?.trim() ||
-                "";
+                fitness_goal.trim();
 
             const cleanProfileBio =
                 profile_bio
@@ -664,6 +1010,7 @@ router.post(
                 !confirm_password ||
                 !cleanFitnessGoal
             ) {
+
                 setFeedback(
                     req,
                     "error",
@@ -688,6 +1035,7 @@ router.post(
                 cleanFirstName.length >
                 MAX_FIRST_NAME_LENGTH
             ) {
+
                 setFeedback(
                     req,
                     "error",
@@ -708,6 +1056,7 @@ router.post(
                 cleanLastName.length >
                 MAX_LAST_NAME_LENGTH
             ) {
+
                 setFeedback(
                     req,
                     "error",
@@ -728,6 +1077,7 @@ router.post(
                 cleanEmail.length >
                 MAX_EMAIL_LENGTH
             ) {
+
                 setFeedback(
                     req,
                     "error",
@@ -748,6 +1098,7 @@ router.post(
                 cleanFitnessGoal.length >
                 MAX_FITNESS_GOAL_LENGTH
             ) {
+
                 setFeedback(
                     req,
                     "error",
@@ -768,6 +1119,7 @@ router.post(
                 cleanProfileBio.length >
                 MAX_PROFILE_BIO_LENGTH
             ) {
+
                 setFeedback(
                     req,
                     "error",
@@ -790,6 +1142,7 @@ router.post(
                 confirm_password.length >
                     MAX_PASSWORD_LENGTH
             ) {
+
                 setFeedback(
                     req,
                     "error",
@@ -807,23 +1160,54 @@ router.post(
             }
 
             // =================================================
-            // EMAIL DOMAIN
+            // EMAIL FORMAT + DOMAIN
             // =================================================
 
             if (
-                !cleanEmail.endsWith(
-                    "@buddy.co.uk"
+                !isValidBuddyEmail(
+                    cleanEmail
                 )
             ) {
+
                 setFeedback(
                     req,
                     "error",
-                    "Your email must end with @buddy.co.uk."
+                    "Please enter a valid @buddy.co.uk email address."
                 );
 
                 setFormData(
                     req,
                     formData
+                );
+
+                return res.redirect(
+                    "/register"
+                );
+            }
+
+            // =================================================
+            // FITNESS GOAL WHITELIST
+            // =================================================
+
+            if (
+                !isValidFitnessGoal(
+                    cleanFitnessGoal
+                )
+            ) {
+
+                setFeedback(
+                    req,
+                    "error",
+                    "Please select a valid fitness goal."
+                );
+
+                setFormData(
+                    req,
+                    {
+                        ...formData,
+                        fitness_goal:
+                            ""
+                    }
                 );
 
                 return res.redirect(
@@ -839,6 +1223,7 @@ router.post(
                 password !==
                 confirm_password
             ) {
+
                 setFeedback(
                     req,
                     "error",
@@ -867,6 +1252,7 @@ router.post(
                     password
                 )
             ) {
+
                 setFeedback(
                     req,
                     "error",
@@ -901,6 +1287,7 @@ router.post(
                 existingUsers.length >
                 0
             ) {
+
                 setFeedback(
                     req,
                     "error",
@@ -974,6 +1361,7 @@ router.post(
                 error.code ===
                 "ER_DUP_ENTRY"
             ) {
+
                 setFeedback(
                     req,
                     "error",
@@ -1015,11 +1403,34 @@ router.post(
                 password
             } = req.body;
 
+            // =================================================
+            // EXPECTED INPUT TYPES
+            // =================================================
+
+            if (
+                !isStringInput(
+                    email
+                ) ||
+                !isStringInput(
+                    password
+                )
+            ) {
+
+                setFeedback(
+                    req,
+                    "error",
+                    "Incorrect email or password."
+                );
+
+                return res.redirect(
+                    "/login"
+                );
+            }
+
             const cleanEmail =
                 email
-                    ?.trim()
-                    .toLowerCase() ||
-                "";
+                    .trim()
+                    .toLowerCase();
 
             const formData = {
                 email:
@@ -1034,6 +1445,7 @@ router.post(
                 !cleanEmail ||
                 !password
             ) {
+
                 setFeedback(
                     req,
                     "error",
@@ -1056,8 +1468,11 @@ router.post(
 
             if (
                 cleanEmail.length >
-                MAX_EMAIL_LENGTH
+                MAX_EMAIL_LENGTH ||
+                password.length >
+                MAX_PASSWORD_LENGTH
             ) {
+
                 setFeedback(
                     req,
                     "error",
@@ -1074,10 +1489,16 @@ router.post(
                 );
             }
 
+            // =================================================
+            // EMAIL FORMAT
+            // =================================================
+
             if (
-                password.length >
-                MAX_PASSWORD_LENGTH
+                !isValidBuddyEmail(
+                    cleanEmail
+                )
             ) {
+
                 setFeedback(
                     req,
                     "error",
@@ -1115,6 +1536,7 @@ router.post(
                 users.length ===
                 0
             ) {
+
                 setFeedback(
                     req,
                     "error",
@@ -1145,6 +1567,7 @@ router.post(
                 );
 
             if (!validPassword) {
+
                 setFeedback(
                     req,
                     "error",
@@ -1173,6 +1596,7 @@ router.post(
                     if (
                         regenerateError
                     ) {
+
                         console.error(
                             "SESSION REGENERATION ERROR:",
                             regenerateError
@@ -1205,6 +1629,7 @@ router.post(
                             if (
                                 saveError
                             ) {
+
                                 console.error(
                                     "SESSION SAVE ERROR:",
                                     saveError
@@ -1293,6 +1718,7 @@ router.get(
                 users.length ===
                 0
             ) {
+
                 req.session.destroy(
                     () => {}
                 );
@@ -1458,6 +1884,7 @@ router.get(
                 users.length ===
                 0
             ) {
+
                 req.session.destroy(
                     () => {}
                 );
@@ -1532,31 +1959,64 @@ router.post(
                 profile_bio
             } = req.body;
 
+            // =================================================
+            // EXPECTED INPUT TYPES
+            // =================================================
+
+            if (
+                !isStringInput(
+                    first_name
+                ) ||
+                !isStringInput(
+                    last_name
+                ) ||
+                !isStringInput(
+                    fitness_goal
+                ) ||
+                (
+                    profile_bio !==
+                        undefined &&
+                    !isStringInput(
+                        profile_bio
+                    )
+                )
+            ) {
+
+                setFeedback(
+                    req,
+                    "error",
+                    "Invalid profile information was submitted."
+                );
+
+                return res.redirect(
+                    "/profile/edit"
+                );
+            }
+
             const cleanFirstName =
-                first_name
-                    ?.trim() ||
-                "";
+                first_name.trim();
 
             const cleanLastName =
-                last_name
-                    ?.trim() ||
-                "";
+                last_name.trim();
 
             const cleanFitnessGoal =
-                fitness_goal
-                    ?.trim() ||
-                "";
+                fitness_goal.trim();
 
             const cleanProfileBio =
                 profile_bio
                     ?.trim() ||
                 "";
 
+            // =================================================
+            // REQUIRED FIELDS
+            // =================================================
+
             if (
                 !cleanFirstName ||
                 !cleanLastName ||
                 !cleanFitnessGoal
             ) {
+
                 setFeedback(
                     req,
                     "error",
@@ -1568,10 +2028,15 @@ router.post(
                 );
             }
 
+            // =================================================
+            // LENGTH CHECKS
+            // =================================================
+
             if (
                 cleanFirstName.length >
                 MAX_FIRST_NAME_LENGTH
             ) {
+
                 setFeedback(
                     req,
                     "error",
@@ -1587,6 +2052,7 @@ router.post(
                 cleanLastName.length >
                 MAX_LAST_NAME_LENGTH
             ) {
+
                 setFeedback(
                     req,
                     "error",
@@ -1602,6 +2068,7 @@ router.post(
                 cleanFitnessGoal.length >
                 MAX_FITNESS_GOAL_LENGTH
             ) {
+
                 setFeedback(
                     req,
                     "error",
@@ -1617,10 +2084,32 @@ router.post(
                 cleanProfileBio.length >
                 MAX_PROFILE_BIO_LENGTH
             ) {
+
                 setFeedback(
                     req,
                     "error",
                     `Profile bio must be ${MAX_PROFILE_BIO_LENGTH} characters or fewer.`
+                );
+
+                return res.redirect(
+                    "/profile/edit"
+                );
+            }
+
+            // =================================================
+            // FITNESS GOAL WHITELIST
+            // =================================================
+
+            if (
+                !isValidFitnessGoal(
+                    cleanFitnessGoal
+                )
+            ) {
+
+                setFeedback(
+                    req,
+                    "error",
+                    "Please select a valid fitness goal."
                 );
 
                 return res.redirect(
@@ -1646,6 +2135,7 @@ router.post(
                 existingUsers.length ===
                 0
             ) {
+
                 req.session.destroy(
                     () => {}
                 );
@@ -1678,14 +2168,14 @@ router.post(
                 ) {
 
                     console.error(
-                        "PROFILE IMAGE CONVERSION ERROR:",
+                        "PROFILE IMAGE PROCESSING ERROR:",
                         conversionError
                     );
 
                     setFeedback(
                         req,
                         "error",
-                        "We couldn't process this image. Please try another photo."
+                        "We couldn't process this image. Please upload a genuine JPG, PNG, WebP, HEIC or HEIF photo."
                     );
 
                     return res.redirect(
@@ -1791,6 +2281,7 @@ router.post(
             if (
                 savedProfilePicture
             ) {
+
                 await deleteFileSafely(
                     savedProfilePicture
                         .filePath

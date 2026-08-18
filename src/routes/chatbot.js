@@ -54,7 +54,8 @@ function setFeedback(
 // =====================================================
 
 function getNumericId(value) {
-    const id = Number(value);
+    const id =
+        Number(value);
 
     return (
         Number.isInteger(id) &&
@@ -62,6 +63,17 @@ function getNumericId(value) {
     )
         ? id
         : null;
+}
+
+// =====================================================
+// STRING INPUT VALIDATION
+// =====================================================
+
+function isStringInput(value) {
+    return (
+        typeof value ===
+        "string"
+    );
 }
 
 // =====================================================
@@ -93,15 +105,6 @@ function requireLogin(
 
 // =====================================================
 // AI COACH RATE LIMIT
-//
-// Maximum:
-// 20 AI Coach submissions per logged-in GymBuddy
-// account every 15 minutes.
-//
-// This helps prevent:
-// - automated AI request spam
-// - excessive OpenAI API usage
-// - accidental rapid repeated submissions
 // =====================================================
 
 const aiCoachLimiter =
@@ -167,8 +170,11 @@ async function loadUserConversations(
                 title,
                 created_at,
                 updated_at
+
              FROM ai_conversations
+
              WHERE user_id = ?
+
              ORDER BY
                 updated_at DESC,
                 conversation_id DESC`,
@@ -195,9 +201,12 @@ async function loadConversation(
                 title,
                 created_at,
                 updated_at
+
              FROM ai_conversations
+
              WHERE conversation_id = ?
                AND user_id = ?
+
              LIMIT 1`,
             [
                 conversationId,
@@ -228,9 +237,12 @@ async function loadConversationMessages(
                 role,
                 message,
                 created_at
+
              FROM ai_messages
+
              WHERE conversation_id = ?
                AND user_id = ?
+
              ORDER BY
                 created_at ASC,
                 ai_message_id ASC`,
@@ -307,10 +319,6 @@ function formatWorkoutDate(value) {
 async function loadGymBuddyContext(
     userId
 ) {
-    // =================================================
-    // USER PROFILE + LATEST STREAK
-    // =================================================
-
     const [userRows] =
         await db.query(
             `SELECT
@@ -324,11 +332,15 @@ async function loadGymBuddyContext(
                     (
                         SELECT
                             s.current_streak
+
                         FROM streaks s
+
                         WHERE s.user_id =
                               u.user_id
+
                         ORDER BY
                             s.streak_id DESC
+
                         LIMIT 1
                     ),
                     0
@@ -338,11 +350,15 @@ async function loadGymBuddyContext(
                     (
                         SELECT
                             s.longest_streak
+
                         FROM streaks s
+
                         WHERE s.user_id =
                               u.user_id
+
                         ORDER BY
                             s.streak_id DESC
+
                         LIMIT 1
                     ),
                     0
@@ -351,11 +367,15 @@ async function loadGymBuddyContext(
                 (
                     SELECT
                         s.last_workout_date
+
                     FROM streaks s
+
                     WHERE s.user_id =
                           u.user_id
+
                     ORDER BY
                         s.streak_id DESC
+
                     LIMIT 1
                 ) AS last_workout_date
 
@@ -385,7 +405,9 @@ async function loadGymBuddyContext(
         await db.query(
             `SELECT
                 COUNT(*) AS total
+
              FROM workout_history
+
              WHERE user_id = ?`,
             [userId]
         );
@@ -804,10 +826,6 @@ router.get(
                     req.session.userId
                 );
 
-            // =================================================
-            // VALIDATE SESSION
-            // =================================================
-
             if (!userId) {
 
                 req.session.destroy(
@@ -861,10 +879,6 @@ router.get(
                     req.params.id
                 );
 
-            // =================================================
-            // VALIDATE SESSION
-            // =================================================
-
             if (!userId) {
 
                 req.session.destroy(
@@ -875,10 +889,6 @@ router.get(
                     "/login"
                 );
             }
-
-            // =================================================
-            // VALIDATE CONVERSATION ID
-            // =================================================
 
             if (!conversationId) {
 
@@ -892,10 +902,6 @@ router.get(
                     "/ai-coach"
                 );
             }
-
-            // =================================================
-            // CHECK OWNERSHIP
-            // =================================================
 
             const conversation =
                 await loadConversation(
@@ -985,6 +991,7 @@ router.post(
                 );
 
             if (!conversationId) {
+
                 throw new Error(
                     "Unable to create AI conversation."
                 );
@@ -1021,11 +1028,8 @@ router.post(
 router.post(
     "/ai-coach",
 
-    // Authentication must run before the limiter
-    // because the limiter uses req.session.userId.
     requireLogin,
 
-    // Protect OpenAI API usage from rapid requests.
     aiCoachLimiter,
 
     async (req, res) => {
@@ -1040,16 +1044,6 @@ router.post(
                     req.session.userId
                 );
 
-            const userMessage =
-                req.body.message
-                    ?.trim();
-
-            conversationId =
-                getNumericId(
-                    req.body
-                        .conversation_id
-                );
-
             // =================================================
             // VALIDATE SESSION
             // =================================================
@@ -1062,6 +1056,72 @@ router.post(
 
                 return res.redirect(
                     "/login"
+                );
+            }
+
+            const rawMessage =
+                req.body.message;
+
+            const rawConversationId =
+                req.body.conversation_id;
+
+            // =================================================
+            // VALIDATE BODY TYPES
+            // =================================================
+
+            if (
+                !isStringInput(
+                    rawMessage
+                ) ||
+                (
+                    rawConversationId !==
+                        undefined &&
+                    rawConversationId !==
+                        "" &&
+                    !isStringInput(
+                        rawConversationId
+                    )
+                )
+            ) {
+
+                setFeedback(
+                    req,
+                    "warning",
+                    "Invalid AI Coach input was submitted."
+                );
+
+                return res.redirect(
+                    "/ai-coach"
+                );
+            }
+
+            const userMessage =
+                rawMessage.trim();
+
+            conversationId =
+                rawConversationId
+                    ? getNumericId(
+                        rawConversationId
+                    )
+                    : null;
+
+            // =================================================
+            // EXPLICIT INVALID CONVERSATION ID
+            // =================================================
+
+            if (
+                rawConversationId &&
+                !conversationId
+            ) {
+
+                setFeedback(
+                    req,
+                    "warning",
+                    "That AI conversation could not be found."
+                );
+
+                return res.redirect(
+                    "/ai-coach"
                 );
             }
 
@@ -1176,6 +1236,7 @@ router.post(
                     );
 
                 if (!conversationId) {
+
                     throw new Error(
                         "Unable to create AI conversation."
                     );
@@ -1188,6 +1249,7 @@ router.post(
                     );
 
                 if (!conversation) {
+
                     throw new Error(
                         "Created AI conversation could not be loaded."
                     );
@@ -1220,8 +1282,10 @@ router.post(
 
             await db.query(
                 `UPDATE ai_conversations
+
                  SET updated_at =
                      CURRENT_TIMESTAMP
+
                  WHERE conversation_id = ?
                    AND user_id = ?`,
                 [
@@ -1278,12 +1342,16 @@ router.post(
                     `SELECT
                         role,
                         message
+
                      FROM ai_messages
+
                      WHERE conversation_id = ?
                        AND user_id = ?
+
                      ORDER BY
                         created_at DESC,
                         ai_message_id DESC
+
                      LIMIT ?`,
                     [
                         conversationId,
@@ -1499,8 +1567,10 @@ FITNESS SAFETY:
 
             await db.query(
                 `UPDATE ai_conversations
+
                  SET updated_at =
                      CURRENT_TIMESTAMP
+
                  WHERE conversation_id = ?
                    AND user_id = ?`,
                 [
@@ -1508,10 +1578,6 @@ FITNESS SAFETY:
                     userId
                 ]
             );
-
-            // =================================================
-            // REDIRECT TO UPDATED CONVERSATION
-            // =================================================
 
             return res.redirect(
                 `/ai-coach/conversations/${conversationId}`

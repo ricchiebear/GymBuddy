@@ -83,15 +83,7 @@ block content
                                 if request.created_at
 
                                     small.message-request-time
-                                        = new Date(request.created_at).toLocaleString(
-                                            "en-GB",
-                                            {
-                                                day: "2-digit",
-                                                month: "short",
-                                                hour: "2-digit",
-                                                minute: "2-digit"
-                                            }
-                                        )
+                                        = new Date(request.created_at).toLocaleString("en-GB")
 
 
                         // =========================================
@@ -139,6 +131,7 @@ block content
                             form(
                                 method="POST"
                                 action=`/message-requests/${request.request_id}/accept`
+                                onsubmit="return confirm('Accept this message request?')"
                             )
 
                                 button.message-request-accept-button(

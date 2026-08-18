@@ -1,6 +1,8 @@
 const express = require("express");
+
 const db = require("../config/database");
-const formatDate = require("../utils/formatDate");
+const formatDate =
+    require("../utils/formatDate");
 
 const router = express.Router();
 
@@ -24,7 +26,8 @@ function setFeedback(
 // =====================================================
 
 function getNumericId(value) {
-    const id = Number(value);
+    const id =
+        Number(value);
 
     return (
         Number.isInteger(id) &&
@@ -47,6 +50,7 @@ function requireLogin(
         !req.session ||
         !req.session.userId
     ) {
+
         setFeedback(
             req,
             "error",
@@ -63,11 +67,17 @@ function requireLogin(
 
 // =====================================================
 // SAFE INTERNAL URL
+//
+// Notification links must stay inside GymBuddy.
+// External URLs, protocol-relative URLs and
+// backslash-based redirect tricks are rejected.
 // =====================================================
 
 function getSafeInternalUrl(value) {
+
     if (
-        typeof value !== "string" ||
+        typeof value !==
+            "string" ||
         !value.startsWith("/") ||
         value.startsWith("//") ||
         value.includes("\\")
@@ -76,6 +86,7 @@ function getSafeInternalUrl(value) {
     }
 
     try {
+
         const baseUrl =
             "http://gymbuddy.local";
 
@@ -99,6 +110,7 @@ function getSafeInternalUrl(value) {
         );
 
     } catch (error) {
+
         return null;
     }
 }
@@ -119,6 +131,9 @@ router.get(
                     req.session.userId
                 );
 
+            // =================================================
+            // VALIDATE SESSION USER
+            // =================================================
 
             if (!userId) {
 
@@ -126,12 +141,10 @@ router.get(
                     () => {}
                 );
 
-
                 return res.redirect(
                     "/login"
                 );
             }
-
 
             // =================================================
             // GET USER NOTIFICATIONS
@@ -145,13 +158,15 @@ router.get(
                         is_read,
                         target_url,
                         created_at
+
                      FROM notifications
+
                      WHERE user_id = ?
+
                      ORDER BY
                         created_at DESC`,
                     [userId]
                 );
-
 
             // =================================================
             // FORMAT DATES
@@ -164,11 +179,11 @@ router.get(
 
                         displayTime:
                             formatDate(
-                                notification.created_at
+                                notification
+                                    .created_at
                             )
                     })
                 );
-
 
             // =================================================
             // UNREAD COUNT
@@ -178,12 +193,13 @@ router.get(
                 await db.query(
                     `SELECT
                         COUNT(*) AS total
+
                      FROM notifications
+
                      WHERE user_id = ?
                        AND is_read = FALSE`,
                     [userId]
                 );
-
 
             // =================================================
             // RENDER PAGE
@@ -213,7 +229,6 @@ router.get(
                 error
             );
 
-
             return res
                 .status(500)
                 .send(
@@ -225,8 +240,9 @@ router.get(
 
 // =====================================================
 // OPEN NOTIFICATION
-// Marks the notification as read before redirecting
-// to its connected GymBuddy page.
+//
+// Marks the user's notification as read before
+// redirecting to its connected GymBuddy page.
 // =====================================================
 
 router.get(
@@ -241,12 +257,10 @@ router.get(
                     req.params.id
                 );
 
-
             const userId =
                 getNumericId(
                     req.session.userId
                 );
-
 
             // =================================================
             // VALIDATE USER
@@ -258,12 +272,10 @@ router.get(
                     () => {}
                 );
 
-
                 return res.redirect(
                     "/login"
                 );
             }
-
 
             // =================================================
             // VALIDATE NOTIFICATION ID
@@ -277,12 +289,10 @@ router.get(
                     "That notification could not be found."
                 );
 
-
                 return res.redirect(
                     "/notifications"
                 );
             }
-
 
             // =================================================
             // FIND USER'S NOTIFICATION
@@ -292,17 +302,20 @@ router.get(
                 await db.query(
                     `SELECT
                         notification_id,
+                        is_read,
                         target_url
+
                      FROM notifications
+
                      WHERE notification_id = ?
                        AND user_id = ?
+
                      LIMIT 1`,
                     [
                         notificationId,
                         userId
                     ]
                 );
-
 
             if (
                 notifications.length ===
@@ -315,32 +328,35 @@ router.get(
                     "That notification could not be found."
                 );
 
-
                 return res.redirect(
                     "/notifications"
                 );
             }
 
-
             const notification =
                 notifications[0];
 
-
             // =================================================
-            // MARK AS READ
+            // MARK AS READ IF NEEDED
             // =================================================
 
-            await db.query(
-                `UPDATE notifications
-                 SET is_read = TRUE
-                 WHERE notification_id = ?
-                   AND user_id = ?`,
-                [
-                    notificationId,
-                    userId
-                ]
-            );
+            if (
+                !notification.is_read
+            ) {
 
+                await db.query(
+                    `UPDATE notifications
+
+                     SET is_read = TRUE
+
+                     WHERE notification_id = ?
+                       AND user_id = ?`,
+                    [
+                        notificationId,
+                        userId
+                    ]
+                );
+            }
 
             // =================================================
             // NO DESTINATION
@@ -355,7 +371,6 @@ router.get(
                 );
             }
 
-
             // =================================================
             // SAFE INTERNAL DESTINATION
             // =================================================
@@ -365,7 +380,6 @@ router.get(
                     notification.target_url
                 );
 
-
             if (!safeTargetUrl) {
 
                 console.warn(
@@ -373,19 +387,16 @@ router.get(
                     notification.target_url
                 );
 
-
                 setFeedback(
                     req,
                     "warning",
                     "This notification does not have a valid destination."
                 );
 
-
                 return res.redirect(
                     "/notifications"
                 );
             }
-
 
             return res.redirect(
                 safeTargetUrl
@@ -397,7 +408,6 @@ router.get(
                 "OPEN NOTIFICATION ERROR:",
                 error
             );
-
 
             return res
                 .status(500)
@@ -424,12 +434,10 @@ router.post(
                     req.params.id
                 );
 
-
             const userId =
                 getNumericId(
                     req.session.userId
                 );
-
 
             // =================================================
             // VALIDATE USER
@@ -441,12 +449,10 @@ router.post(
                     () => {}
                 );
 
-
                 return res.redirect(
                     "/login"
                 );
             }
-
 
             // =================================================
             // VALIDATE NOTIFICATION ID
@@ -460,32 +466,35 @@ router.post(
                     "That notification could not be found."
                 );
 
-
                 return res.redirect(
                     "/notifications"
                 );
             }
 
-
             // =================================================
-            // UPDATE USER'S NOTIFICATION
+            // FIND USER'S NOTIFICATION FIRST
             // =================================================
 
-            const [result] =
+            const [notificationRows] =
                 await db.query(
-                    `UPDATE notifications
-                     SET is_read = TRUE
+                    `SELECT
+                        notification_id,
+                        is_read
+
+                     FROM notifications
+
                      WHERE notification_id = ?
-                       AND user_id = ?`,
+                       AND user_id = ?
+
+                     LIMIT 1`,
                     [
                         notificationId,
                         userId
                     ]
                 );
 
-
             if (
-                result.affectedRows ===
+                notificationRows.length ===
                 0
             ) {
 
@@ -495,19 +504,57 @@ router.post(
                     "That notification could not be found."
                 );
 
+                return res.redirect(
+                    "/notifications"
+                );
+            }
+
+            const notification =
+                notificationRows[0];
+
+            // =================================================
+            // ALREADY READ
+            // =================================================
+
+            if (
+                Boolean(
+                    notification.is_read
+                )
+            ) {
+
+                setFeedback(
+                    req,
+                    "info",
+                    "This notification is already marked as read."
+                );
 
                 return res.redirect(
                     "/notifications"
                 );
             }
 
+            // =================================================
+            // MARK AS READ
+            // =================================================
+
+            await db.query(
+                `UPDATE notifications
+
+                 SET is_read = TRUE
+
+                 WHERE notification_id = ?
+                   AND user_id = ?`,
+                [
+                    notificationId,
+                    userId
+                ]
+            );
 
             setFeedback(
                 req,
                 "success",
                 "Notification marked as read."
             );
-
 
             return res.redirect(
                 "/notifications"
@@ -519,7 +566,6 @@ router.post(
                 "MARK NOTIFICATION READ ERROR:",
                 error
             );
-
 
             return res
                 .status(500)
@@ -546,29 +592,31 @@ router.post(
                     req.session.userId
                 );
 
-
             if (!userId) {
 
                 req.session.destroy(
                     () => {}
                 );
 
-
                 return res.redirect(
                     "/login"
                 );
             }
 
-
             const [result] =
                 await db.query(
                     `UPDATE notifications
+
                      SET is_read = TRUE
+
                      WHERE user_id = ?
                        AND is_read = FALSE`,
                     [userId]
                 );
 
+            // =================================================
+            // NOTHING TO UPDATE
+            // =================================================
 
             if (
                 result.affectedRows ===
@@ -581,19 +629,16 @@ router.post(
                     "You have no unread notifications."
                 );
 
-
                 return res.redirect(
                     "/notifications"
                 );
             }
-
 
             setFeedback(
                 req,
                 "success",
                 "All notifications have been marked as read."
             );
-
 
             return res.redirect(
                 "/notifications"
@@ -605,7 +650,6 @@ router.post(
                 "MARK ALL NOTIFICATIONS READ ERROR:",
                 error
             );
-
 
             return res
                 .status(500)
@@ -632,12 +676,10 @@ router.post(
                     req.params.id
                 );
 
-
             const userId =
                 getNumericId(
                     req.session.userId
                 );
-
 
             // =================================================
             // VALIDATE USER
@@ -649,12 +691,10 @@ router.post(
                     () => {}
                 );
 
-
                 return res.redirect(
                     "/login"
                 );
             }
-
 
             // =================================================
             // VALIDATE NOTIFICATION ID
@@ -668,20 +708,19 @@ router.post(
                     "That notification could not be found."
                 );
 
-
                 return res.redirect(
                     "/notifications"
                 );
             }
 
-
             // =================================================
-            // DELETE USER'S NOTIFICATION ONLY
+            // DELETE CURRENT USER'S NOTIFICATION ONLY
             // =================================================
 
             const [result] =
                 await db.query(
                     `DELETE FROM notifications
+
                      WHERE notification_id = ?
                        AND user_id = ?`,
                     [
@@ -689,7 +728,6 @@ router.post(
                         userId
                     ]
                 );
-
 
             if (
                 result.affectedRows ===
@@ -702,19 +740,16 @@ router.post(
                     "That notification could not be found."
                 );
 
-
                 return res.redirect(
                     "/notifications"
                 );
             }
-
 
             setFeedback(
                 req,
                 "success",
                 "Notification deleted successfully."
             );
-
 
             return res.redirect(
                 "/notifications"
@@ -726,7 +761,6 @@ router.post(
                 "DELETE NOTIFICATION ERROR:",
                 error
             );
-
 
             return res
                 .status(500)

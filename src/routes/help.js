@@ -9,6 +9,17 @@ const db = require("../config/database");
 const router = express.Router();
 
 // =====================================================
+// CONFIGURATION
+// =====================================================
+
+const MAX_SUPPORT_MESSAGE_LENGTH = 1500;
+
+// Prevent an identical open ticket from being created
+// repeatedly within this number of minutes.
+const DUPLICATE_TICKET_WINDOW_MINUTES =
+    10;
+
+// =====================================================
 // FEEDBACK HELPER
 // =====================================================
 
@@ -28,7 +39,8 @@ function setFeedback(
 // =====================================================
 
 function getNumericId(value) {
-    const id = Number(value);
+    const id =
+        Number(value);
 
     return (
         Number.isInteger(id) &&
@@ -36,6 +48,17 @@ function getNumericId(value) {
     )
         ? id
         : null;
+}
+
+// =====================================================
+// STRING INPUT VALIDATION
+// =====================================================
+
+function isStringInput(value) {
+    return (
+        typeof value ===
+        "string"
+    );
 }
 
 // =====================================================
@@ -51,6 +74,7 @@ function requireLogin(
         !req.session ||
         !req.session.userId
     ) {
+
         setFeedback(
             req,
             "error",
@@ -67,10 +91,6 @@ function requireLogin(
 
 // =====================================================
 // SUPPORT TICKET RATE LIMIT
-//
-// Maximum:
-// 5 support ticket submissions per logged-in user
-// every 60 minutes.
 // =====================================================
 
 const supportTicketLimiter =
@@ -111,7 +131,6 @@ const supportTicketLimiter =
 
 // =====================================================
 // ALLOWED SUPPORT ISSUE TYPES
-// Must match support.pug exactly.
 // =====================================================
 
 const allowedIssueTypes = [
@@ -133,13 +152,12 @@ const allowedIssueTypes = [
 
 // =====================================================
 // HELP CENTRE
-// Public so users can still access help if they
-// are having trouble logging into GymBuddy.
 // =====================================================
 
 router.get(
     "/help",
     (req, res) => {
+
         return res.render(
             "help",
             {
@@ -158,17 +176,16 @@ router.get(
     "/support",
     requireLogin,
     async (req, res) => {
+
         try {
+
             const userId =
                 getNumericId(
                     req.session.userId
                 );
 
-            // =================================================
-            // VALIDATE SESSION USER
-            // =================================================
-
             if (!userId) {
+
                 req.session.destroy(
                     () => {}
                 );
@@ -177,10 +194,6 @@ router.get(
                     "/login"
                 );
             }
-
-            // =================================================
-            // GET USER EMAIL
-            // =================================================
 
             const [users] =
                 await db.query(
@@ -196,6 +209,7 @@ router.get(
                 users.length ===
                 0
             ) {
+
                 req.session.destroy(
                     () => {}
                 );
@@ -204,10 +218,6 @@ router.get(
                     "/login"
                 );
             }
-
-            // =================================================
-            // RENDER SUPPORT FORM
-            // =================================================
 
             return res.render(
                 "support",
@@ -221,6 +231,7 @@ router.get(
             );
 
         } catch (error) {
+
             console.error(
                 "SUPPORT PAGE ERROR:",
                 error
@@ -244,25 +255,18 @@ router.post(
     requireLogin,
     supportTicketLimiter,
     async (req, res) => {
+
+        let connection;
+
         try {
+
             const userId =
                 getNumericId(
                     req.session.userId
                 );
 
-            const issueType =
-                req.body.issue_type
-                    ?.trim();
-
-            const message =
-                req.body.message
-                    ?.trim();
-
-            // =================================================
-            // VALIDATE SESSION USER
-            // =================================================
-
             if (!userId) {
+
                 req.session.destroy(
                     () => {}
                 );
@@ -273,6 +277,38 @@ router.post(
             }
 
             // =================================================
+            // VALIDATE BODY TYPES
+            // =================================================
+
+            if (
+                !isStringInput(
+                    req.body.issue_type
+                ) ||
+                !isStringInput(
+                    req.body.message
+                )
+            ) {
+
+                setFeedback(
+                    req,
+                    "warning",
+                    "Invalid support information was submitted."
+                );
+
+                return res.redirect(
+                    "/support"
+                );
+            }
+
+            const issueType =
+                req.body.issue_type
+                    .trim();
+
+            const message =
+                req.body.message
+                    .trim();
+
+            // =================================================
             // VALIDATE REQUIRED FIELDS
             // =================================================
 
@@ -280,6 +316,7 @@ router.post(
                 !issueType ||
                 !message
             ) {
+
                 setFeedback(
                     req,
                     "warning",
@@ -300,6 +337,7 @@ router.post(
                     issueType
                 )
             ) {
+
                 setFeedback(
                     req,
                     "warning",
@@ -317,12 +355,13 @@ router.post(
 
             if (
                 message.length >
-                1500
+                MAX_SUPPORT_MESSAGE_LENGTH
             ) {
+
                 setFeedback(
                     req,
                     "warning",
-                    "Your support message must be 1500 characters or fewer."
+                    `Your support message must be ${MAX_SUPPORT_MESSAGE_LENGTH} characters or fewer.`
                 );
 
                 return res.redirect(
@@ -331,17 +370,26 @@ router.post(
             }
 
             // =================================================
-            // GET ACCOUNT EMAIL FROM DATABASE
-            // Do not trust browser-submitted email data.
+            // START TRANSACTION
+            // =================================================
+
+            connection =
+                await db.getConnection();
+
+            await connection
+                .beginTransaction();
+
+            // =================================================
+            // LOCK CURRENT USER + GET EMAIL
             // =================================================
 
             const [users] =
-                await db.query(
+                await connection.query(
                     `SELECT
                         email
                      FROM users
                      WHERE user_id = ?
-                     LIMIT 1`,
+                     FOR UPDATE`,
                     [userId]
                 );
 
@@ -349,6 +397,10 @@ router.post(
                 users.length ===
                 0
             ) {
+
+                await connection
+                    .rollback();
+
                 req.session.destroy(
                     () => {}
                 );
@@ -362,30 +414,82 @@ router.post(
                 users[0].email;
 
             // =================================================
+            // DUPLICATE OPEN TICKET CHECK
+            //
+            // Prevent accidental double-click submissions
+            // creating the exact same ticket repeatedly.
+            // =================================================
+
+            const [existingTickets] =
+                await connection.query(
+                    `SELECT
+                        ticket_id
+                     FROM support_tickets
+                     WHERE user_id = ?
+                       AND issue_type = ?
+                       AND message = ?
+                       AND LOWER(status) = 'open'
+                       AND created_at >=
+                           DATE_SUB(
+                               NOW(),
+                               INTERVAL ? MINUTE
+                           )
+                     ORDER BY
+                        created_at DESC
+                     LIMIT 1
+                     FOR UPDATE`,
+                    [
+                        userId,
+                        issueType,
+                        message,
+                        DUPLICATE_TICKET_WINDOW_MINUTES
+                    ]
+                );
+
+            if (
+                existingTickets.length >
+                0
+            ) {
+
+                await connection
+                    .rollback();
+
+                setFeedback(
+                    req,
+                    "info",
+                    "You already submitted this support request recently."
+                );
+
+                return res.redirect(
+                    `/support-tickets/${existingTickets[0].ticket_id}`
+                );
+            }
+
+            // =================================================
             // CREATE SUPPORT TICKET
             // =================================================
 
-            await db.query(
-                `INSERT INTO support_tickets
-                 (
-                    user_id,
-                    email,
-                    issue_type,
-                    message,
-                    status
-                 )
-                 VALUES (?, ?, ?, ?, 'open')`,
-                [
-                    userId,
-                    accountEmail,
-                    issueType,
-                    message
-                ]
-            );
+            const [result] =
+                await connection.query(
+                    `INSERT INTO support_tickets
+                     (
+                        user_id,
+                        email,
+                        issue_type,
+                        message,
+                        status
+                     )
+                     VALUES (?, ?, ?, ?, 'open')`,
+                    [
+                        userId,
+                        accountEmail,
+                        issueType,
+                        message
+                    ]
+                );
 
-            // =================================================
-            // SUCCESS FEEDBACK
-            // =================================================
+            await connection
+                .commit();
 
             setFeedback(
                 req,
@@ -393,21 +497,59 @@ router.post(
                 "Your support ticket has been submitted successfully."
             );
 
+            if (
+                result.insertId
+            ) {
+
+                return res.redirect(
+                    `/support-tickets/${result.insertId}`
+                );
+            }
+
             return res.redirect(
                 "/my-support-tickets"
             );
 
         } catch (error) {
+
+            if (connection) {
+
+                try {
+
+                    await connection
+                        .rollback();
+
+                } catch (
+                    rollbackError
+                ) {
+
+                    console.error(
+                        "SUPPORT TICKET ROLLBACK ERROR:",
+                        rollbackError
+                    );
+                }
+            }
+
             console.error(
                 "SUBMIT SUPPORT TICKET ERROR:",
                 error
             );
 
-            return res
-                .status(500)
-                .send(
-                    "Error submitting support ticket."
-                );
+            setFeedback(
+                req,
+                "error",
+                "Something went wrong while submitting your support ticket."
+            );
+
+            return res.redirect(
+                "/support"
+            );
+
+        } finally {
+
+            if (connection) {
+                connection.release();
+            }
         }
     }
 );
@@ -420,17 +562,16 @@ router.get(
     "/my-support-tickets",
     requireLogin,
     async (req, res) => {
+
         try {
+
             const userId =
                 getNumericId(
                     req.session.userId
                 );
 
-            // =================================================
-            // VALIDATE SESSION USER
-            // =================================================
-
             if (!userId) {
+
                 req.session.destroy(
                     () => {}
                 );
@@ -439,10 +580,6 @@ router.get(
                     "/login"
                 );
             }
-
-            // =================================================
-            // GET CURRENT USER'S TICKETS
-            // =================================================
 
             const [tickets] =
                 await db.query(
@@ -453,16 +590,15 @@ router.get(
                         message,
                         status,
                         created_at
+
                      FROM support_tickets
+
                      WHERE user_id = ?
+
                      ORDER BY
                         created_at DESC`,
                     [userId]
                 );
-
-            // =================================================
-            // RENDER
-            // =================================================
 
             return res.render(
                 "my-support-tickets",
@@ -475,6 +611,7 @@ router.get(
             );
 
         } catch (error) {
+
             console.error(
                 "MY SUPPORT TICKETS ERROR:",
                 error
@@ -497,7 +634,9 @@ router.get(
     "/support-tickets/:id",
     requireLogin,
     async (req, res) => {
+
         try {
+
             const ticketId =
                 getNumericId(
                     req.params.id
@@ -508,11 +647,8 @@ router.get(
                     req.session.userId
                 );
 
-            // =================================================
-            // VALIDATE SESSION USER
-            // =================================================
-
             if (!userId) {
+
                 req.session.destroy(
                     () => {}
                 );
@@ -522,11 +658,8 @@ router.get(
                 );
             }
 
-            // =================================================
-            // VALIDATE TICKET ID
-            // =================================================
-
             if (!ticketId) {
+
                 setFeedback(
                     req,
                     "warning",
@@ -538,10 +671,6 @@ router.get(
                 );
             }
 
-            // =================================================
-            // FIND USER'S TICKET ONLY
-            // =================================================
-
             const [tickets] =
                 await db.query(
                     `SELECT
@@ -551,9 +680,12 @@ router.get(
                         message,
                         status,
                         created_at
+
                      FROM support_tickets
+
                      WHERE ticket_id = ?
                        AND user_id = ?
+
                      LIMIT 1`,
                     [
                         ticketId,
@@ -565,6 +697,7 @@ router.get(
                 tickets.length ===
                 0
             ) {
+
                 setFeedback(
                     req,
                     "warning",
@@ -575,10 +708,6 @@ router.get(
                     "/my-support-tickets"
                 );
             }
-
-            // =================================================
-            // RENDER DETAILS
-            // =================================================
 
             return res.render(
                 "support-ticket-details",
@@ -592,6 +721,7 @@ router.get(
             );
 
         } catch (error) {
+
             console.error(
                 "SUPPORT TICKET DETAILS ERROR:",
                 error

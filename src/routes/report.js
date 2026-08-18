@@ -9,6 +9,12 @@ const db = require("../config/database");
 const router = express.Router();
 
 // =====================================================
+// CONFIGURATION
+// =====================================================
+
+const MAX_OTHER_REASON_LENGTH = 1000;
+
+// =====================================================
 // FEEDBACK HELPER
 // =====================================================
 
@@ -28,7 +34,8 @@ function setFeedback(
 // =====================================================
 
 function getNumericId(value) {
-    const id = Number(value);
+    const id =
+        Number(value);
 
     return (
         Number.isInteger(id) &&
@@ -36,6 +43,17 @@ function getNumericId(value) {
     )
         ? id
         : null;
+}
+
+// =====================================================
+// STRING INPUT VALIDATION
+// =====================================================
+
+function isStringInput(value) {
+    return (
+        typeof value ===
+        "string"
+    );
 }
 
 // =====================================================
@@ -51,6 +69,7 @@ function requireLogin(
         !req.session ||
         !req.session.userId
     ) {
+
         setFeedback(
             req,
             "error",
@@ -67,10 +86,6 @@ function requireLogin(
 
 // =====================================================
 // REPORT RATE LIMIT
-//
-// Maximum:
-// 10 report submissions per logged-in user
-// every 60 minutes.
 // =====================================================
 
 const reportLimiter =
@@ -157,10 +172,6 @@ router.get(
                     req.session.userId
                 );
 
-            // =================================================
-            // VALIDATE SESSION
-            // =================================================
-
             if (!userId) {
 
                 req.session.destroy(
@@ -171,10 +182,6 @@ router.get(
                     "/login"
                 );
             }
-
-            // =================================================
-            // VALIDATE WORKOUT ID
-            // =================================================
 
             if (!workoutId) {
 
@@ -188,10 +195,6 @@ router.get(
                     "/workouts"
                 );
             }
-
-            // =================================================
-            // FIND WORKOUT
-            // =================================================
 
             const [workoutRows] =
                 await db.query(
@@ -226,10 +229,6 @@ router.get(
             const workout =
                 workoutRows[0];
 
-            // =================================================
-            // BLOCK REPORTING OWN WORKOUT
-            // =================================================
-
             if (
                 Number(
                     workout.owner_id
@@ -246,10 +245,6 @@ router.get(
                     `/workouts/${workoutId}`
                 );
             }
-
-            // =================================================
-            // RENDER REPORT FORM
-            // =================================================
 
             return res.render(
                 "report-workout",
@@ -303,18 +298,6 @@ router.post(
                     req.session.userId
                 );
 
-            const selectedReason =
-                req.body.reason
-                    ?.trim();
-
-            const otherReason =
-                req.body.other_reason
-                    ?.trim();
-
-            // =================================================
-            // VALIDATE SESSION
-            // =================================================
-
             if (!reporterId) {
 
                 req.session.destroy(
@@ -325,10 +308,6 @@ router.post(
                     "/login"
                 );
             }
-
-            // =================================================
-            // VALIDATE WORKOUT ID
-            // =================================================
 
             if (!workoutId) {
 
@@ -342,6 +321,43 @@ router.post(
                     "/workouts"
                 );
             }
+
+            // =================================================
+            // VALIDATE BODY TYPES
+            // =================================================
+
+            if (
+                !isStringInput(
+                    req.body.reason
+                ) ||
+                (
+                    req.body.other_reason !==
+                        undefined &&
+                    !isStringInput(
+                        req.body.other_reason
+                    )
+                )
+            ) {
+
+                setFeedback(
+                    req,
+                    "warning",
+                    "Invalid report information was submitted."
+                );
+
+                return res.redirect(
+                    `/workouts/${workoutId}/report`
+                );
+            }
+
+            const selectedReason =
+                req.body.reason
+                    .trim();
+
+            const otherReason =
+                req.body.other_reason
+                    ?.trim() ||
+                "";
 
             // =================================================
             // VALIDATE REPORT REASON
@@ -404,13 +420,13 @@ router.post(
 
                 if (
                     otherReason.length >
-                    1000
+                    MAX_OTHER_REASON_LENGTH
                 ) {
 
                     setFeedback(
                         req,
                         "warning",
-                        "Your report explanation must be 1000 characters or fewer."
+                        `Your report explanation must be ${MAX_OTHER_REASON_LENGTH} characters or fewer.`
                     );
 
                     return res.redirect(
@@ -431,6 +447,41 @@ router.post(
 
             await connection
                 .beginTransaction();
+
+            // =================================================
+            // LOCK REPORTER
+            //
+            // This gives concurrent report submissions from the
+            // same account a consistent lock before checking for
+            // duplicates.
+            // =================================================
+
+            const [reporterRows] =
+                await connection.query(
+                    `SELECT
+                        user_id
+                     FROM users
+                     WHERE user_id = ?
+                     FOR UPDATE`,
+                    [reporterId]
+                );
+
+            if (
+                reporterRows.length ===
+                0
+            ) {
+
+                await connection
+                    .rollback();
+
+                req.session.destroy(
+                    () => {}
+                );
+
+                return res.redirect(
+                    "/login"
+                );
+            }
 
             // =================================================
             // FIND + LOCK WORKOUT
@@ -554,16 +605,8 @@ router.post(
                 ]
             );
 
-            // =================================================
-            // COMMIT
-            // =================================================
-
             await connection
                 .commit();
-
-            // =================================================
-            // SUCCESS FEEDBACK
-            // =================================================
 
             setFeedback(
                 req,

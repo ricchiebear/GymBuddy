@@ -1,9 +1,16 @@
 const express = require("express");
+
 const db = require("../config/database");
 const createNotification =
     require("../utils/createNotification");
 
 const router = express.Router();
+
+// =====================================================
+// CONFIGURATION
+// =====================================================
+
+const MAX_MESSAGE_LENGTH = 2000;
 
 // =====================================================
 // FEEDBACK HELPER
@@ -25,7 +32,8 @@ function setFeedback(
 // =====================================================
 
 function getNumericId(value) {
-    const id = Number(value);
+    const id =
+        Number(value);
 
     return (
         Number.isInteger(id) &&
@@ -48,6 +56,7 @@ function requireLogin(
         !req.session ||
         !req.session.userId
     ) {
+
         setFeedback(
             req,
             "error",
@@ -60,6 +69,141 @@ function requireLogin(
     }
 
     next();
+}
+
+// =====================================================
+// LOCK TWO USERS IN CONSISTENT ORDER
+// =====================================================
+
+async function lockUserPair(
+    connection,
+    userOneId,
+    userTwoId
+) {
+    const firstUserId =
+        Math.min(
+            userOneId,
+            userTwoId
+        );
+
+    const secondUserId =
+        Math.max(
+            userOneId,
+            userTwoId
+        );
+
+    const [rows] =
+        await connection.query(
+            `SELECT
+                user_id
+
+             FROM users
+
+             WHERE user_id IN (?, ?)
+
+             ORDER BY user_id
+
+             FOR UPDATE`,
+            [
+                firstUserId,
+                secondUserId
+            ]
+        );
+
+    return rows;
+}
+
+// =====================================================
+// CHECK WHETHER TWO USERS CAN MESSAGE DIRECTLY
+// =====================================================
+
+async function usersCanMessageDirectly(
+    userOneId,
+    userTwoId,
+    queryRunner = db
+) {
+    // =================================================
+    // SHARED WORKOUT
+    // =================================================
+
+    const [sharedWorkoutRows] =
+        await queryRunner.query(
+            `SELECT
+                w.workout_id
+
+             FROM workouts w
+
+             INNER JOIN workout_participants wp
+                ON w.workout_id =
+                   wp.workout_id
+
+             WHERE
+                (
+                    w.user_id = ?
+                    AND wp.user_id = ?
+                )
+                OR
+                (
+                    w.user_id = ?
+                    AND wp.user_id = ?
+                )
+
+             LIMIT 1`,
+            [
+                userOneId,
+                userTwoId,
+                userTwoId,
+                userOneId
+            ]
+        );
+
+    if (
+        sharedWorkoutRows.length >
+        0
+    ) {
+        return true;
+    }
+
+    // =================================================
+    // ACCEPTED REQUEST
+    // =================================================
+
+    const [acceptedRows] =
+        await queryRunner.query(
+            `SELECT
+                request_id
+
+             FROM message_requests
+
+             WHERE LOWER(status) =
+                   'accepted'
+
+               AND
+               (
+                    (
+                        sender_id = ?
+                        AND receiver_id = ?
+                    )
+                    OR
+                    (
+                        sender_id = ?
+                        AND receiver_id = ?
+                    )
+               )
+
+             LIMIT 1`,
+            [
+                userOneId,
+                userTwoId,
+                userTwoId,
+                userOneId
+            ]
+        );
+
+    return (
+        acceptedRows.length >
+        0
+    );
 }
 
 // =====================================================
@@ -78,27 +222,16 @@ router.get(
                     req.session.userId
                 );
 
-
-            // =================================================
-            // VALIDATE SESSION USER
-            // =================================================
-
             if (!userId) {
 
                 req.session.destroy(
                     () => {}
                 );
 
-
                 return res.redirect(
                     "/login"
                 );
             }
-
-
-            // =================================================
-            // GET PENDING REQUESTS FOR CURRENT USER
-            // =================================================
 
             const [requests] =
                 await db.query(
@@ -134,11 +267,6 @@ router.get(
                     [userId]
                 );
 
-
-            // =================================================
-            // RENDER
-            // =================================================
-
             return res.render(
                 "message-requests",
                 {
@@ -155,7 +283,6 @@ router.get(
                 "MESSAGE REQUESTS PAGE ERROR:",
                 error
             );
-
 
             return res
                 .status(500)
@@ -184,16 +311,10 @@ router.post(
                     req.params.id
                 );
 
-
             const receiverId =
                 getNumericId(
                     req.session.userId
                 );
-
-
-            // =================================================
-            // VALIDATE SESSION
-            // =================================================
 
             if (!receiverId) {
 
@@ -201,16 +322,10 @@ router.post(
                     () => {}
                 );
 
-
                 return res.redirect(
                     "/login"
                 );
             }
-
-
-            // =================================================
-            // VALIDATE REQUEST ID
-            // =================================================
 
             if (!requestId) {
 
@@ -220,12 +335,10 @@ router.post(
                     "That message request could not be found."
                 );
 
-
                 return res.redirect(
                     "/message-requests"
                 );
             }
-
 
             // =================================================
             // START TRANSACTION
@@ -234,14 +347,11 @@ router.post(
             connection =
                 await db.getConnection();
 
-
             await connection
                 .beginTransaction();
 
-
             // =================================================
             // LOAD + LOCK REQUEST
-            // OWNERSHIP IS CHECKED IN SQL
             // =================================================
 
             const [requestRows] =
@@ -265,7 +375,6 @@ router.post(
                     ]
                 );
 
-
             if (
                 requestRows.length ===
                 0
@@ -274,23 +383,82 @@ router.post(
                 await connection
                     .rollback();
 
-
                 setFeedback(
                     req,
                     "warning",
                     "That message request could not be found or you do not have permission to manage it."
                 );
 
+                return res.redirect(
+                    "/message-requests"
+                );
+            }
+
+            const request =
+                requestRows[0];
+
+            const senderId =
+                getNumericId(
+                    request.sender_id
+                );
+
+            if (!senderId) {
+
+                await connection.query(
+                    `DELETE FROM message_requests
+                     WHERE request_id = ?`,
+                    [requestId]
+                );
+
+                await connection
+                    .commit();
+
+                setFeedback(
+                    req,
+                    "warning",
+                    "This message request is invalid and has been removed."
+                );
 
                 return res.redirect(
                     "/message-requests"
                 );
             }
 
+            // =================================================
+            // LOCK BOTH USERS
+            // =================================================
 
-            const request =
-                requestRows[0];
+            const lockedUsers =
+                await lockUserPair(
+                    connection,
+                    senderId,
+                    receiverId
+                );
 
+            if (
+                lockedUsers.length <
+                2
+            ) {
+
+                await connection.query(
+                    `DELETE FROM message_requests
+                     WHERE request_id = ?`,
+                    [requestId]
+                );
+
+                await connection
+                    .commit();
+
+                setFeedback(
+                    req,
+                    "warning",
+                    "This message request is no longer valid."
+                );
+
+                return res.redirect(
+                    "/message-requests"
+                );
+            }
 
             // =================================================
             // STATUS CHECK
@@ -307,19 +475,89 @@ router.post(
                 await connection
                     .rollback();
 
-
                 setFeedback(
                     req,
                     "warning",
                     "This message request has already been processed."
                 );
 
+                return res.redirect(
+                    "/message-requests"
+                );
+            }
+
+            // =================================================
+            // CHECK WHETHER USERS ALREADY HAVE DIRECT ACCESS
+            // =================================================
+
+            const alreadyCanMessage =
+                await usersCanMessageDirectly(
+                    senderId,
+                    receiverId,
+                    connection
+                );
+
+            if (alreadyCanMessage) {
+
+                // =============================================
+                // STALE PENDING REQUEST
+                // =============================================
+
+                await connection.query(
+                    `DELETE FROM message_requests
+                     WHERE request_id = ?`,
+                    [requestId]
+                );
+
+                await connection
+                    .commit();
+
+                setFeedback(
+                    req,
+                    "info",
+                    "You can already message this user directly, so the old pending request was removed."
+                );
+
+                return res.redirect(
+                    `/messages/${senderId}`
+                );
+            }
+
+            // =================================================
+            // VALIDATE STORED FIRST MESSAGE
+            // =================================================
+
+            if (
+                typeof request.first_message !==
+                    "string" ||
+                !request.first_message.trim() ||
+                request.first_message.trim().length >
+                    MAX_MESSAGE_LENGTH
+            ) {
+
+                await connection.query(
+                    `DELETE FROM message_requests
+                     WHERE request_id = ?`,
+                    [requestId]
+                );
+
+                await connection
+                    .commit();
+
+                setFeedback(
+                    req,
+                    "warning",
+                    "This message request contained invalid message content and has been removed."
+                );
 
                 return res.redirect(
                     "/message-requests"
                 );
             }
 
+            const firstMessage =
+                request.first_message
+                    .trim();
 
             // =================================================
             // ACCEPT REQUEST
@@ -328,6 +566,7 @@ router.post(
             await connection.query(
                 `UPDATE message_requests
                  SET status = 'accepted'
+
                  WHERE request_id = ?
                    AND receiver_id = ?`,
                 [
@@ -336,6 +575,38 @@ router.post(
                 ]
             );
 
+            // =================================================
+            // REMOVE OTHER PENDING REQUESTS BETWEEN SAME USERS
+            // =================================================
+
+            await connection.query(
+                `DELETE FROM message_requests
+
+                 WHERE request_id != ?
+
+                   AND LOWER(status) =
+                       'pending'
+
+                   AND
+                   (
+                        (
+                            sender_id = ?
+                            AND receiver_id = ?
+                        )
+                        OR
+                        (
+                            sender_id = ?
+                            AND receiver_id = ?
+                        )
+                   )`,
+                [
+                    requestId,
+                    senderId,
+                    receiverId,
+                    receiverId,
+                    senderId
+                ]
+            );
 
             // =================================================
             // CREATE FIRST MESSAGE
@@ -351,19 +622,18 @@ router.post(
                  )
                  VALUES (?, ?, ?, FALSE)`,
                 [
-                    request.sender_id,
-                    request.receiver_id,
-                    request.first_message
+                    senderId,
+                    receiverId,
+                    firstMessage
                 ]
             );
-
 
             // =================================================
             // NOTIFY ORIGINAL SENDER
             // =================================================
 
             await createNotification(
-                request.sender_id,
+                senderId,
                 `${
                     req.session.userName ||
                     "The user"
@@ -372,14 +642,12 @@ router.post(
                 connection
             );
 
-
             // =================================================
-            // COMMIT TRANSACTION
+            // COMMIT
             // =================================================
 
             await connection
                 .commit();
-
 
             setFeedback(
                 req,
@@ -387,9 +655,8 @@ router.post(
                 "Message request accepted."
             );
 
-
             return res.redirect(
-                `/messages/${request.sender_id}`
+                `/messages/${senderId}`
             );
 
         } catch (error) {
@@ -412,12 +679,10 @@ router.post(
                 }
             }
 
-
             console.error(
                 "ACCEPT MESSAGE REQUEST ERROR:",
                 error
             );
-
 
             return res
                 .status(500)
@@ -452,16 +717,10 @@ router.post(
                     req.params.id
                 );
 
-
             const receiverId =
                 getNumericId(
                     req.session.userId
                 );
-
-
-            // =================================================
-            // VALIDATE SESSION
-            // =================================================
 
             if (!receiverId) {
 
@@ -469,16 +728,10 @@ router.post(
                     () => {}
                 );
 
-
                 return res.redirect(
                     "/login"
                 );
             }
-
-
-            // =================================================
-            // VALIDATE REQUEST ID
-            // =================================================
 
             if (!requestId) {
 
@@ -488,12 +741,10 @@ router.post(
                     "That message request could not be found."
                 );
 
-
                 return res.redirect(
                     "/message-requests"
                 );
             }
-
 
             // =================================================
             // START TRANSACTION
@@ -502,14 +753,11 @@ router.post(
             connection =
                 await db.getConnection();
 
-
             await connection
                 .beginTransaction();
 
-
             // =================================================
             // LOAD + LOCK REQUEST
-            // OWNERSHIP IS CHECKED IN SQL
             // =================================================
 
             const [requestRows] =
@@ -532,7 +780,6 @@ router.post(
                     ]
                 );
 
-
             if (
                 requestRows.length ===
                 0
@@ -541,23 +788,56 @@ router.post(
                 await connection
                     .rollback();
 
-
                 setFeedback(
                     req,
                     "warning",
                     "That message request could not be found or you do not have permission to manage it."
                 );
 
+                return res.redirect(
+                    "/message-requests"
+                );
+            }
+
+            const request =
+                requestRows[0];
+
+            const senderId =
+                getNumericId(
+                    request.sender_id
+                );
+
+            if (!senderId) {
+
+                await connection.query(
+                    `DELETE FROM message_requests
+                     WHERE request_id = ?`,
+                    [requestId]
+                );
+
+                await connection
+                    .commit();
+
+                setFeedback(
+                    req,
+                    "warning",
+                    "This message request was invalid and has been removed."
+                );
 
                 return res.redirect(
                     "/message-requests"
                 );
             }
 
+            // =================================================
+            // LOCK USER PAIR
+            // =================================================
 
-            const request =
-                requestRows[0];
-
+            await lockUserPair(
+                connection,
+                senderId,
+                receiverId
+            );
 
             // =================================================
             // STATUS CHECK
@@ -574,19 +854,16 @@ router.post(
                 await connection
                     .rollback();
 
-
                 setFeedback(
                     req,
                     "warning",
                     "This message request has already been processed."
                 );
 
-
                 return res.redirect(
                     "/message-requests"
                 );
             }
-
 
             // =================================================
             // REJECT REQUEST
@@ -595,6 +872,7 @@ router.post(
             await connection.query(
                 `UPDATE message_requests
                  SET status = 'rejected'
+
                  WHERE request_id = ?
                    AND receiver_id = ?`,
                 [
@@ -603,13 +881,12 @@ router.post(
                 ]
             );
 
-
             // =================================================
             // NOTIFY ORIGINAL SENDER
             // =================================================
 
             await createNotification(
-                request.sender_id,
+                senderId,
                 `${
                     req.session.userName ||
                     "The user"
@@ -618,21 +895,14 @@ router.post(
                 connection
             );
 
-
-            // =================================================
-            // COMMIT TRANSACTION
-            // =================================================
-
             await connection
                 .commit();
-
 
             setFeedback(
                 req,
                 "success",
                 "Message request rejected."
             );
-
 
             return res.redirect(
                 "/message-requests"
@@ -658,12 +928,10 @@ router.post(
                 }
             }
 
-
             console.error(
                 "REJECT MESSAGE REQUEST ERROR:",
                 error
             );
-
 
             return res
                 .status(500)
