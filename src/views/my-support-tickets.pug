@@ -114,9 +114,6 @@ block content
 
         // =====================================================
         // TICKET LIST / EMPTY STATE
-        //
-        // IMPORTANT:
-        // Keep the else directly connected to this if.
         // =====================================================
 
         if tickets && tickets.length > 0
@@ -216,7 +213,7 @@ block content
                         .my-ticket-card-action
 
                             a.my-ticket-view-button(
-                                href=`/my-support-tickets/${ticket.ticket_id}`
+                                href=`/support-tickets/${ticket.ticket_id}`
                             )
                                 | View Details →
 

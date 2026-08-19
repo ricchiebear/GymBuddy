@@ -4,10 +4,11 @@ block content
 
     main.support-ticket-details-page
 
-        -
-            const ticketStatus = String(
-                ticket.status || "pending"
-            ).toLowerCase()
+        - const ticketStatus = String(ticket.status || "pending").toLowerCase()
+        - const ticketStatusClass = ticketStatus.replace(/\s+/g, "-").replace(/_/g, "-")
+        - const submittedDate = ticket.created_at ? new Date(ticket.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "Date unavailable"
+        - const submittedTime = ticket.created_at ? new Date(ticket.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : ""
+
 
         // =====================================================
         // BACK NAVIGATION
@@ -18,7 +19,10 @@ block content
             a.support-ticket-back-link(
                 href="/my-support-tickets"
             )
-                span ←
+
+                span
+                    | ←
+
                 |  Back to Support Tickets
 
 
@@ -47,21 +51,31 @@ block content
 
 
             span.support-ticket-status(
-                class=`support-status-${ticketStatus}`
+                class=`support-status-${ticketStatusClass}`
             )
+
                 if ticketStatus === "resolved"
+
                     | ✓ Resolved
 
                 else if ticketStatus === "closed"
+
                     | ✓ Closed
 
                 else if ticketStatus === "open"
+
                     | ● Open
 
+                else if ticketStatus === "pending"
+
+                    | ● Pending
+
                 else if ticketStatus === "in progress" || ticketStatus === "in_progress"
+
                     | ● In Progress
 
                 else
+
                     | ● #{ticket.status || "Pending"}
 
 
@@ -71,7 +85,10 @@ block content
 
         section.support-ticket-overview
 
+
+            // =================================================
             // ISSUE TYPE
+            // =================================================
 
             article.support-ticket-info-card
 
@@ -87,7 +104,9 @@ block content
                         = ticket.issue_type || "General Support"
 
 
-            // EMAIL
+            // =================================================
+            // CONTACT EMAIL
+            // =================================================
 
             article.support-ticket-info-card
 
@@ -100,10 +119,12 @@ block content
                         | CONTACT EMAIL
 
                     strong.support-ticket-email
-                        = ticket.email
+                        = ticket.email || "Not provided"
 
 
-            // SUBMITTED
+            // =================================================
+            // SUBMITTED DATE
+            // =================================================
 
             article.support-ticket-info-card
 
@@ -116,27 +137,12 @@ block content
                         | SUBMITTED
 
                     strong
-                        = new Date(
-                            ticket.created_at
-                        ).toLocaleDateString(
-                            "en-GB",
-                            {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric"
-                            }
-                        )
+                        = submittedDate
 
-                    small
-                        = new Date(
-                            ticket.created_at
-                        ).toLocaleTimeString(
-                            "en-GB",
-                            {
-                                hour: "2-digit",
-                                minute: "2-digit"
-                            }
-                        )
+                    if submittedTime
+
+                        small
+                            = submittedTime
 
 
         // =====================================================
@@ -144,6 +150,7 @@ block content
         // =====================================================
 
         section.support-ticket-details-layout
+
 
             // =================================================
             // PROBLEM DESCRIPTION
@@ -163,13 +170,21 @@ block content
                             p.support-ticket-eyebrow
                                 | YOUR REQUEST
 
-                            h2 Problem Description
+                            h2
+                                | Problem Description
 
 
                 .support-ticket-message-body
 
-                    p
-                        = ticket.message
+                    if ticket.message
+
+                        p
+                            = ticket.message
+
+                    else
+
+                        p
+                            | No problem description was provided.
 
 
             // =================================================
@@ -188,10 +203,16 @@ block content
                         p.support-ticket-eyebrow
                             | SUPPORT
 
-                        h2 Ticket Progress
+                        h2
+                            | Ticket Progress
 
 
                 .support-ticket-timeline
+
+
+                    // =========================================
+                    // TICKET SUBMITTED
+                    // =========================================
 
                     .support-ticket-timeline-item.is-complete
 
@@ -200,13 +221,18 @@ block content
 
                         .support-ticket-timeline-content
 
-                            strong Ticket submitted
+                            strong
+                                | Ticket submitted
 
                             span
                                 | Your support request was received.
 
 
-                    if ticketStatus === "resolved" || ticketStatus === "closed"
+                    // =========================================
+                    // CURRENT STATUS
+                    // =========================================
+
+                    if ticketStatus === "resolved"
 
                         .support-ticket-timeline-item.is-complete
 
@@ -215,10 +241,60 @@ block content
 
                             .support-ticket-timeline-content
 
-                                strong Review completed
+                                strong
+                                    | Resolved
 
                                 span
-                                    | This support case has been resolved.
+                                    | Your support request has been resolved.
+
+
+                    else if ticketStatus === "closed"
+
+                        .support-ticket-timeline-item.is-complete
+
+                            .support-ticket-timeline-marker
+                                | ✓
+
+                            .support-ticket-timeline-content
+
+                                strong
+                                    | Closed
+
+                                span
+                                    | This support case has been closed.
+
+
+                    else if ticketStatus === "in progress" || ticketStatus === "in_progress"
+
+                        .support-ticket-timeline-item.is-current
+
+                            .support-ticket-timeline-marker
+                                | •
+
+                            .support-ticket-timeline-content
+
+                                strong
+                                    | In Progress
+
+                                span
+                                    | Your support request is currently being reviewed.
+
+
+                    else if ticketStatus === "pending"
+
+                        .support-ticket-timeline-item.is-current
+
+                            .support-ticket-timeline-marker
+                                | •
+
+                            .support-ticket-timeline-content
+
+                                strong
+                                    | Pending Review
+
+                                span
+                                    | Your support request is waiting to be reviewed.
+
 
                     else
 
@@ -229,10 +305,11 @@ block content
 
                             .support-ticket-timeline-content
 
-                                strong Under review
+                                strong
+                                    | Open
 
                                 span
-                                    | Your request is currently in the support process.
+                                    | Your support request is open and awaiting review.
 
 
         // =====================================================
@@ -248,7 +325,8 @@ block content
 
                 div
 
-                    strong Need help with something else?
+                    strong
+                        | Need help with something else?
 
                     p
                         | Create another support ticket and tell

@@ -1,0 +1,212 @@
+extends layout
+
+block content
+
+    main.joined-workouts-page
+
+        // =====================================================
+        // PAGE HEADER
+        // =====================================================
+
+        section.joined-workouts-hero
+
+            .joined-workouts-hero-copy
+
+                p.joined-workouts-eyebrow
+                    | YOUR TRAINING JOURNEY
+
+                h1 Workout History
+
+                p
+                    | Look back at the workouts you've completed,
+                    | track your training journey and see how far
+                    | you've come.
+
+
+            .joined-workouts-summary
+
+                .joined-workouts-summary-icon
+                    | 📚
+
+                div
+
+                    small
+                        | Completed Workouts
+
+                    strong
+                        if history
+                            = history.length
+                        else
+                            | 0
+
+
+        // =====================================================
+        // WORKOUT HISTORY
+        // =====================================================
+
+        if history && history.length > 0
+
+            section.joined-workouts-grid
+
+                each workout in history
+
+                    article.joined-workout-card
+
+                        // =========================================
+                        // IMAGE
+                        // =========================================
+
+                        .joined-workout-image
+
+                            if workout.workout_image
+
+                                img(
+                                    src=workout.workout_image
+                                    alt=workout.title
+                                )
+
+                            else
+
+                                .joined-workout-image-placeholder
+                                    | 🏋️
+
+
+                            span.joined-workout-status.joined-workout-status-completed
+                                | Completed
+
+
+                        // =========================================
+                        // CONTENT
+                        // =========================================
+
+                        .joined-workout-content
+
+                            .joined-workout-top
+
+                                .joined-workout-type
+                                    = workout.workout_type || "Workout"
+
+                                .joined-workout-host
+                                    | Hosted by #{workout.creator_first_name} #{workout.creator_last_name}
+
+
+                            h2
+                                = workout.title
+
+
+                            // =====================================
+                            // DETAILS
+                            // =====================================
+
+                            .joined-workout-details
+
+                                .joined-workout-detail
+
+                                    span
+                                        | 📍
+
+                                    div
+
+                                        small
+                                            | Location
+
+                                        strong
+                                            = workout.location || "Not set"
+
+
+                                .joined-workout-detail
+
+                                    span
+                                        | 📅
+
+                                    div
+
+                                        small
+                                            | Workout Date
+
+                                        if workout.workout_date
+
+                                            strong
+                                                = new Date(workout.workout_date).toLocaleDateString("en-GB")
+
+                                        else
+
+                                            strong
+                                                | Not available
+
+
+                                .joined-workout-detail
+
+                                    span
+                                        | 🕒
+
+                                    div
+
+                                        small
+                                            | Started
+
+                                        if workout.start_time
+
+                                            strong
+                                                = new Date(workout.start_time).toLocaleString("en-GB")
+
+                                        else
+
+                                            strong
+                                                | Not available
+
+
+                                .joined-workout-detail
+
+                                    span
+                                        | ⏱️
+
+                                    div
+
+                                        small
+                                            | Finished
+
+                                        if workout.end_time
+
+                                            strong
+                                                = new Date(workout.end_time).toLocaleString("en-GB")
+
+                                        else
+
+                                            strong
+                                                | Not available
+
+
+                            // =====================================
+                            // ACTIONS
+                            // =====================================
+
+                            .joined-workout-actions
+
+                                a.joined-workout-view(
+                                    href="/workouts/" + workout.workout_id
+                                )
+                                    | View Workout Details
+
+        else
+
+            // =================================================
+            // EMPTY STATE
+            // =================================================
+
+            section.joined-workouts-empty
+
+                .joined-workouts-empty-icon
+                    | 📚
+
+                h2 No workout history yet
+
+                p
+                    | Your completed workouts will appear here.
+                    | Complete a workout to start building your
+                    | GymBuddy training history.
+
+                a.primary-button(
+                    href="/workouts"
+                )
+                    | Explore Workouts

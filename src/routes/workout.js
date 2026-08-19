@@ -1181,6 +1181,467 @@ router.get(
     }
 );
 
+
+// =====================================================
+// WORKOUT HISTORY
+// =====================================================
+
+router.get(
+    "/workout-history",
+    requireLogin,
+    async (req, res) => {
+
+        try {
+
+            const userId =
+                getNumericId(
+                    req.session.userId
+                );
+
+            // =================================================
+            // VALIDATE SESSION USER
+            // =================================================
+
+            if (!userId) {
+
+                req.session.destroy(
+                    () => {}
+                );
+
+                return res.redirect(
+                    "/login"
+                );
+            }
+
+            // =================================================
+            // LOAD COMPLETED WORKOUT HISTORY
+            // =================================================
+
+            const [history] =
+                await db.query(
+                    `SELECT
+                        wh.workout_id,
+                        wh.workout_date,
+                        wh.created_at
+                            AS history_created_at,
+
+                        w.title,
+                        w.workout_type,
+                        w.location,
+                        w.start_time,
+                        w.end_time,
+                        w.workout_image,
+                        w.status,
+
+                        u.user_id
+                            AS creator_id,
+
+                        u.first_name
+                            AS creator_first_name,
+
+                        u.last_name
+                            AS creator_last_name
+
+                     FROM workout_history wh
+
+                     INNER JOIN workouts w
+                        ON wh.workout_id =
+                           w.workout_id
+
+                     INNER JOIN users u
+                        ON w.user_id =
+                           u.user_id
+
+                     WHERE wh.user_id = ?
+
+                     ORDER BY
+                        wh.workout_date DESC,
+                        wh.created_at DESC`,
+                    [userId]
+                );
+
+            // =================================================
+            // RENDER HISTORY PAGE
+            // =================================================
+
+            return res.render(
+                "workout-history",
+                {
+                    title:
+                        "Workout History",
+
+                    history
+                }
+            );
+
+        } catch (error) {
+
+            console.error(
+                "WORKOUT HISTORY ERROR:",
+                error
+            );
+
+            return res
+                .status(500)
+                .send(
+                    "Error loading workout history."
+                );
+        }
+    }
+);
+
+
+// =====================================================
+// LEAVE JOINED WORKOUT
+// =====================================================
+
+router.post(
+    "/joined-workouts/:id/leave",
+    requireLogin,
+    async (req, res) => {
+
+        let connection;
+
+        try {
+
+            const workoutId =
+                getNumericId(
+                    req.params.id
+                );
+
+            const userId =
+                getNumericId(
+                    req.session.userId
+                );
+
+            // =================================================
+            // VALIDATE SESSION
+            // =================================================
+
+            if (!userId) {
+
+                req.session.destroy(
+                    () => {}
+                );
+
+                return res.redirect(
+                    "/login"
+                );
+            }
+
+            // =================================================
+            // VALIDATE WORKOUT ID
+            // =================================================
+
+            if (!workoutId) {
+
+                setFeedback(
+                    req,
+                    "warning",
+                    "That workout could not be found."
+                );
+
+                return res.redirect(
+                    "/joined-workouts"
+                );
+            }
+
+            // =================================================
+            // START TRANSACTION
+            // =================================================
+
+            connection =
+                await db.getConnection();
+
+            await connection
+                .beginTransaction();
+
+            // =================================================
+            // LOAD + LOCK WORKOUT
+            // =================================================
+
+            const [workoutRows] =
+                await connection.query(
+                    `SELECT
+                        workout_id,
+                        user_id AS owner_id,
+                        title,
+                        status,
+                        start_time,
+                        end_time
+
+                     FROM workouts
+
+                     WHERE workout_id = ?
+
+                     FOR UPDATE`,
+                    [workoutId]
+                );
+
+            if (
+                workoutRows.length ===
+                0
+            ) {
+
+                await connection
+                    .rollback();
+
+                setFeedback(
+                    req,
+                    "warning",
+                    "That workout could not be found."
+                );
+
+                return res.redirect(
+                    "/joined-workouts"
+                );
+            }
+
+            const workout =
+                workoutRows[0];
+
+            // =================================================
+            // OWNER CANNOT LEAVE OWN WORKOUT
+            // =================================================
+
+            if (
+                Number(
+                    workout.owner_id
+                ) === userId
+            ) {
+
+                await connection
+                    .rollback();
+
+                setFeedback(
+                    req,
+                    "warning",
+                    "You cannot leave a workout that you created."
+                );
+
+                return res.redirect(
+                    `/workouts/${workoutId}`
+                );
+            }
+
+            // =================================================
+            // WORKOUT STATUS CHECK
+            // =================================================
+
+            const currentStatus =
+                String(
+                    workout.status ||
+                    ""
+                ).toLowerCase();
+
+            // =================================================
+            // CANNOT LEAVE COMPLETED WORKOUT
+            // =================================================
+
+            if (
+                currentStatus ===
+                "completed"
+            ) {
+
+                await connection
+                    .rollback();
+
+                setFeedback(
+                    req,
+                    "warning",
+                    "You cannot leave a completed workout."
+                );
+
+                return res.redirect(
+                    "/joined-workouts"
+                );
+            }
+
+            // =================================================
+            // CANNOT LEAVE CANCELLED WORKOUT
+            // =================================================
+
+            if (
+                currentStatus ===
+                "cancelled"
+            ) {
+
+                await connection
+                    .rollback();
+
+                setFeedback(
+                    req,
+                    "warning",
+                    "You cannot leave a cancelled workout."
+                );
+
+                return res.redirect(
+                    "/joined-workouts"
+                );
+            }
+
+            // =================================================
+            // CHECK PARTICIPANT RELATIONSHIP
+            // =================================================
+
+            const [participantRows] =
+                await connection.query(
+                    `SELECT
+                        participant_id
+
+                     FROM workout_participants
+
+                     WHERE workout_id = ?
+                       AND user_id = ?
+
+                     LIMIT 1
+
+                     FOR UPDATE`,
+                    [
+                        workoutId,
+                        userId
+                    ]
+                );
+
+            // =================================================
+            // USER IS NOT ACTUALLY JOINED
+            // =================================================
+
+            if (
+                participantRows.length ===
+                0
+            ) {
+
+                await connection
+                    .rollback();
+
+                setFeedback(
+                    req,
+                    "info",
+                    "You are not currently joined to this workout."
+                );
+
+                return res.redirect(
+                    "/joined-workouts"
+                );
+            }
+
+            // =================================================
+            // REMOVE PARTICIPANT
+            // =================================================
+
+            await connection.query(
+                `DELETE FROM workout_participants
+
+                 WHERE workout_id = ?
+                   AND user_id = ?`,
+                [
+                    workoutId,
+                    userId
+                ]
+            );
+
+            // =================================================
+            // RESET PREVIOUS ACCEPTED JOIN REQUEST
+            //
+            // Your existing join-request route allows a rejected
+            // request to become pending again.
+            //
+            // Therefore, changing accepted -> rejected here
+            // prevents stale accepted state and allows the user
+            // to request to join again later if the workout is
+            // still open and has not started.
+            // =================================================
+
+            await connection.query(
+                `UPDATE join_requests
+
+                 SET status = 'rejected'
+
+                 WHERE workout_id = ?
+                   AND user_id = ?
+                   AND LOWER(status) =
+                       'accepted'`,
+                [
+                    workoutId,
+                    userId
+                ]
+            );
+
+            // =================================================
+            // COMMIT TRANSACTION
+            // =================================================
+
+            await connection
+                .commit();
+
+            // =================================================
+            // SUCCESS
+            // =================================================
+
+            setFeedback(
+                req,
+                "success",
+                `You have left "${workout.title}".`
+            );
+
+            return res.redirect(
+                "/joined-workouts"
+            );
+
+        } catch (error) {
+
+            // =================================================
+            // ROLLBACK ON FAILURE
+            // =================================================
+
+            if (connection) {
+
+                try {
+
+                    await connection
+                        .rollback();
+
+                } catch (
+                    rollbackError
+                ) {
+
+                    console.error(
+                        "LEAVE WORKOUT ROLLBACK ERROR:",
+                        rollbackError
+                    );
+                }
+            }
+
+            console.error(
+                "LEAVE WORKOUT ERROR:",
+                error
+            );
+
+            setFeedback(
+                req,
+                "error",
+                "Something went wrong while leaving the workout."
+            );
+
+            return res.redirect(
+                "/joined-workouts"
+            );
+
+        } finally {
+
+            // =================================================
+            // RELEASE DATABASE CONNECTION
+            // =================================================
+
+            if (connection) {
+                connection.release();
+            }
+        }
+    }
+);
+
+
 // =====================================================
 // SHOW EDIT WORKOUT FORM
 // =====================================================
