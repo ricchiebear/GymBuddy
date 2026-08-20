@@ -5,13 +5,11 @@ services:
   # =====================================================
 
   web:
-    image: node:20
+    build:
+      context: .
+      dockerfile: Dockerfile
 
     working_dir: /app
-
-    volumes:
-      - .:/app
-      - /app/node_modules
 
     ports:
       - "3000:3000"
@@ -19,7 +17,11 @@ services:
     env_file:
       - .env
 
-    command: sh -c "npm install && npm start"
+    environment:
+      NODE_ENV: production
+
+    volumes:
+      - uploads_data:/app/src/public/uploads
 
     depends_on:
       db:
@@ -46,13 +48,20 @@ services:
 
       MYSQL_PASSWORD: ${DB_PASSWORD}
 
-    ports:
-      - "3307:3306"
+    # IMPORTANT:
+    # No host port is exposed in production.
+    #
+    # GymBuddy connects internally using:
+    #
+    # DB_HOST=db
+    # DB_PORT=3306
 
     volumes:
       - db_data:/var/lib/mysql
-      - ./src/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
-      - ./src/db/seed.sql:/docker-entrypoint-initdb.d/seed.sql
+
+      # Production creates the database schema only.
+      # Development seed data is intentionally excluded.
+      - ./src/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
 
     healthcheck:
       test:
@@ -70,30 +79,14 @@ services:
       start_period: 30s
 
 
-  # =====================================================
-  # PHPMYADMIN
-  # =====================================================
-
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin
-
-    restart: unless-stopped
-
-    ports:
-      - "8081:80"
-
-    environment:
-      PMA_HOST: db
-      PMA_PORT: 3306
-
-    depends_on:
-      db:
-        condition: service_healthy
-
-
 # =====================================================
-# PERSISTENT DATABASE STORAGE
+# PERSISTENT STORAGE
 # =====================================================
 
 volumes:
+
+  # MySQL database files
   db_data:
+
+  # User-uploaded profile and workout images
+  uploads_data:

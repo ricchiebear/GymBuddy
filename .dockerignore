@@ -1,37 +1,53 @@
 # =====================================================
-# GYMBUDDY ENVIRONMENT VARIABLES
+# DEPENDENCIES
 # =====================================================
 
-# =====================================================
-# APPLICATION
-# =====================================================
-
-NODE_ENV=production
-PORT=3000
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 
 # =====================================================
-# SESSION SECURITY
+# ENVIRONMENT / SECRETS
 # =====================================================
 
-SESSION_SECRET=your_session_secret_here
-
-
-# =====================================================
-# OPENAI API
-# =====================================================
-
-OPENAI_API_KEY=your_openai_api_key_here
+.env
+.env.*
+!.env.example
 
 
 # =====================================================
-# DATABASE
+# GIT
 # =====================================================
 
-DB_HOST=db
-DB_PORT=3306
-DB_USER=gymbuddy_user
-DB_PASSWORD=your_database_password_here
-DB_NAME=gymbuddy
-COOKIE_SECURE=false
-MYSQL_ROOT_PASSWORD=your_mysql_root_password_here
+.git
+.gitignore
+
+
+# =====================================================
+# DOCKER DEVELOPMENT FILES
+# =====================================================
+
+docker-compose.yml
+docker-compose.override.yml
+
+
+# =====================================================
+# EDITOR / OPERATING SYSTEM
+# =====================================================
+
+.DS_Store
+.vscode
+.idea
+
+
+# =====================================================
+# TEST / CACHE / TEMPORARY FILES
+# =====================================================
+
+coverage
+.cache
+*.log
+tmp
+temp

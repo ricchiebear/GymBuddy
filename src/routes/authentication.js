@@ -860,7 +860,7 @@ router.get(
             );
 
         return res.render(
-            "Login",
+            "login",
             {
                 title:
                     "Login",
@@ -886,7 +886,7 @@ router.get(
             );
 
         return res.render(
-            "Register",
+            "register",
             {
                 title:
                     "Register",
@@ -1792,7 +1792,7 @@ router.get(
                     : 0;
 
             return res.render(
-                "Profile",
+                "profile",
                 {
                     title:
                         "My Profile",

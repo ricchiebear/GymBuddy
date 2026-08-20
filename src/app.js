@@ -5,7 +5,17 @@ const path = require("path");
 const session = require("express-session");
 const helmet = require("helmet");
 
-const db = require("./config/database");
+const MySQLStore =
+    require("express-mysql-session")(
+        session
+    );
+
+const db =
+    require("./config/database");
+
+// =====================================================
+// ROUTES
+// =====================================================
 
 const authenticationRoutes =
     require("./routes/authentication");
@@ -37,21 +47,119 @@ const recommendationRoutes =
 const chatbotRoutes =
     require("./routes/chatbot");
 
-const app = express();
+const app =
+    express();
 
 // =====================================================
 // APPLICATION CONFIGURATION
 // =====================================================
 
 const isProduction =
-    process.env.NODE_ENV === "production";
+    process.env.NODE_ENV ===
+    "production";
 
 const sessionSecret =
     process.env.SESSION_SECRET;
 
+// =====================================================
+// COOKIE SECURITY CONFIGURATION
+// =====================================================
+//
+// Local production testing:
+//
+// COOKIE_SECURE=false
+//
+// Real HTTPS production:
+//
+// COOKIE_SECURE=true
+//
+// If COOKIE_SECURE is not supplied, GymBuddy falls
+// back to NODE_ENV behaviour.
+// =====================================================
+
+const cookieSecureValue =
+    process.env.COOKIE_SECURE;
+
+if (
+    cookieSecureValue !== undefined &&
+    cookieSecureValue !== "true" &&
+    cookieSecureValue !== "false"
+) {
+    throw new Error(
+        "COOKIE_SECURE must be either true or false."
+    );
+}
+
+const secureCookies =
+    cookieSecureValue !== undefined
+        ? cookieSecureValue === "true"
+        : isProduction;
+
 if (!sessionSecret) {
+
     throw new Error(
         "SESSION_SECRET is missing. Add it to your environment variables before starting GymBuddy."
+    );
+}
+
+// =====================================================
+// DATABASE ENVIRONMENT VARIABLES FOR SESSION STORE
+// =====================================================
+
+const {
+    DB_HOST,
+    DB_PORT,
+    DB_USER,
+    DB_PASSWORD,
+    DB_NAME
+} = process.env;
+
+// =====================================================
+// VALIDATE SESSION DATABASE CONFIGURATION
+// =====================================================
+
+const requiredDatabaseVariables = {
+    DB_HOST,
+    DB_USER,
+    DB_PASSWORD,
+    DB_NAME
+};
+
+for (
+    const [name, value]
+    of Object.entries(
+        requiredDatabaseVariables
+    )
+) {
+
+    if (!value) {
+
+        throw new Error(
+            `${name} is missing. Add it to your environment variables before starting GymBuddy.`
+        );
+    }
+}
+
+// =====================================================
+// DATABASE PORT
+// =====================================================
+
+const databasePort =
+    Number(
+        DB_PORT ||
+        3306
+    );
+
+if (
+    !Number.isInteger(
+        databasePort
+    ) ||
+    databasePort <= 0 ||
+    databasePort > 65535
+) {
+
+    throw new Error(
+        "DB_PORT must be a valid database port number."
     );
 }
 
@@ -70,8 +178,13 @@ app.disable(
 // -----------------------------------------------------
 // TRUST PRODUCTION REVERSE PROXY
 // -----------------------------------------------------
+//
+// Real production deployments normally place GymBuddy
+// behind an HTTPS reverse proxy.
+// -----------------------------------------------------
 
 if (isProduction) {
+
     app.set(
         "trust proxy",
         1
@@ -81,35 +194,286 @@ if (isProduction) {
 // =====================================================
 // SECURITY HEADERS
 // =====================================================
-//
-// Helmet provides a collection of HTTP security headers.
-//
-// CSP remains disabled during this development/security
-// pass so the current frontend is not accidentally broken.
-// It can be tightened during production configuration.
-// =====================================================
 
 app.use(
     helmet({
-        contentSecurityPolicy:
-            false,
+
+        contentSecurityPolicy: {
+
+            useDefaults:
+                false,
+
+            directives: {
+
+                // =============================================
+                // DEFAULT RESOURCE POLICY
+                // =============================================
+
+                defaultSrc: [
+                    "'self'"
+                ],
+
+                // =============================================
+                // JAVASCRIPT
+                // =============================================
+
+                scriptSrc: [
+                    "'self'"
+                ],
+
+                // Existing GymBuddy Pug files still contain
+                // several inline onsubmit confirmation handlers.
+                //
+                // This remains temporarily enabled until those
+                // handlers are moved into external JS files.
+
+                scriptSrcAttr: [
+                    "'unsafe-inline'"
+                ],
+
+                // =============================================
+                // CSS
+                // =============================================
+
+                styleSrc: [
+                    "'self'"
+                ],
+
+                // =============================================
+                // IMAGES
+                // =============================================
+
+                imgSrc: [
+                    "'self'",
+                    "data:",
+                    "blob:"
+                ],
+
+                // =============================================
+                // FONTS
+                // =============================================
+
+                fontSrc: [
+                    "'self'"
+                ],
+
+                // =============================================
+                // NETWORK REQUESTS
+                // =============================================
+
+                connectSrc: [
+                    "'self'"
+                ],
+
+                // =============================================
+                // EMBEDDED FRAMES
+                // =============================================
+
+                frameSrc: [
+                    "'self'",
+                    "https://www.google.com"
+                ],
+
+                // =============================================
+                // PREVENT PLUGIN CONTENT
+                // =============================================
+
+                objectSrc: [
+                    "'none'"
+                ],
+
+                // =============================================
+                // BASE URL
+                // =============================================
+
+                baseUri: [
+                    "'self'"
+                ],
+
+                // =============================================
+                // FORM SUBMISSIONS
+                // =============================================
+
+                formAction: [
+                    "'self'"
+                ],
+
+                // =============================================
+                // PREVENT CLICKJACKING
+                // =============================================
+
+                frameAncestors: [
+                    "'none'"
+                ],
+
+                // =============================================
+                // MANIFESTS
+                // =============================================
+
+                manifestSrc: [
+                    "'self'"
+                ],
+
+                // =============================================
+                // MEDIA
+                // =============================================
+
+                mediaSrc: [
+                    "'self'"
+                ],
+
+                // =============================================
+                // WORKERS
+                // =============================================
+
+                workerSrc: [
+                    "'self'",
+                    "blob:"
+                ]
+            }
+        },
+
+        // -------------------------------------------------
+        // GOOGLE MAPS IFRAME COMPATIBILITY
+        // -------------------------------------------------
 
         crossOriginEmbedderPolicy:
-            false
+            false,
+
+        // -------------------------------------------------
+        // HSTS
+        //
+        // Enable only when GymBuddy is genuinely being
+        // served securely over HTTPS.
+        // -------------------------------------------------
+
+        strictTransportSecurity:
+            secureCookies
+                ? {
+                    maxAge:
+                        15552000,
+
+                    includeSubDomains:
+                        true
+                }
+                : false,
+
+        // -------------------------------------------------
+        // REFERRER POLICY
+        // -------------------------------------------------
+
+        referrerPolicy: {
+            policy:
+                "strict-origin-when-cross-origin"
+        }
     })
 );
 
 // =====================================================
-// SESSION
+// MYSQL SESSION STORE
+// =====================================================
+
+const sessionStoreOptions = {
+
+    host:
+        DB_HOST,
+
+    port:
+        databasePort,
+
+    user:
+        DB_USER,
+
+    password:
+        DB_PASSWORD,
+
+    database:
+        DB_NAME,
+
+    // -------------------------------------------------
+    // SESSION EXPIRY — 2 HOURS
+    // -------------------------------------------------
+
+    expiration:
+        1000 *
+        60 *
+        60 *
+        2,
+
+    // -------------------------------------------------
+    // CLEAN EXPIRED SESSIONS
+    // -------------------------------------------------
+
+    clearExpired:
+        true,
+
+    checkExpirationInterval:
+        1000 *
+        60 *
+        15,
+
+    // -------------------------------------------------
+    // CREATE SESSION TABLE AUTOMATICALLY
+    // -------------------------------------------------
+
+    createDatabaseTable:
+        true,
+
+    schema: {
+
+        tableName:
+            "user_sessions",
+
+        columnNames: {
+
+            session_id:
+                "session_id",
+
+            expires:
+                "expires",
+
+            data:
+                "data"
+        }
+    }
+};
+
+const sessionStore =
+    new MySQLStore(
+        sessionStoreOptions
+    );
+
+// =====================================================
+// SESSION CONFIGURATION
 // =====================================================
 
 app.use(
     session({
+
+        // -------------------------------------------------
+        // COOKIE NAME
+        // -------------------------------------------------
+
         name:
             "gymbuddy.sid",
 
+        // -------------------------------------------------
+        // MYSQL SESSION STORE
+        // -------------------------------------------------
+
+        store:
+            sessionStore,
+
+        // -------------------------------------------------
+        // SESSION SECRET
+        // -------------------------------------------------
+
         secret:
             sessionSecret,
+
+        // -------------------------------------------------
+        // SESSION STORAGE OPTIONS
+        // -------------------------------------------------
 
         resave:
             false,
@@ -117,7 +481,15 @@ app.use(
         saveUninitialized:
             false,
 
+        // -------------------------------------------------
+        // SECURE COOKIE / PROXY BEHAVIOUR
+        // -------------------------------------------------
+
+        proxy:
+            secureCookies,
+
         cookie: {
+
             httpOnly:
                 true,
 
@@ -125,7 +497,7 @@ app.use(
                 "lax",
 
             secure:
-                isProduction,
+                secureCookies,
 
             maxAge:
                 1000 *
@@ -140,7 +512,10 @@ app.use(
 // ID VALIDATION
 // =====================================================
 
-function getNumericId(value) {
+function getNumericId(
+    value
+) {
+
     const id =
         Number(value);
 
@@ -157,7 +532,11 @@ function getNumericId(value) {
 // =====================================================
 
 app.use(
-    (req, res, next) => {
+    (
+        req,
+        res,
+        next
+    ) => {
 
         const loggedInUserId =
             getNumericId(
@@ -187,7 +566,11 @@ app.use(
 // =====================================================
 
 app.use(
-    (req, res, next) => {
+    (
+        req,
+        res,
+        next
+    ) => {
 
         res.locals.feedback =
             req.session?.feedback ||
@@ -197,6 +580,7 @@ app.use(
             req.session &&
             req.session.feedback
         ) {
+
             delete req.session.feedback;
         }
 
@@ -207,15 +591,10 @@ app.use(
 // =====================================================
 // REQUEST BODY MIDDLEWARE
 // =====================================================
-//
-// Normal JSON and form requests are limited to 100 KB.
-//
-// Image uploads are handled separately by Multer in the
-// relevant route files.
-// =====================================================
 
 app.use(
     express.urlencoded({
+
         extended:
             true,
 
@@ -226,6 +605,7 @@ app.use(
 
 app.use(
     express.json({
+
         limit:
             "100kb"
     })
@@ -259,11 +639,17 @@ app.use(
             "public"
         ),
         {
+
             dotfiles:
                 "ignore",
 
             fallthrough:
-                true
+                true,
+
+            maxAge:
+                isProduction
+                    ? "1d"
+                    : 0
         }
     )
 );
@@ -274,7 +660,10 @@ app.use(
 
 app.get(
     "/",
-    async (req, res) => {
+    async (
+        req,
+        res
+    ) => {
 
         try {
 
@@ -292,6 +681,7 @@ app.get(
                 return res.render(
                     "Home",
                     {
+
                         title:
                             "GymBuddy",
 
@@ -309,8 +699,11 @@ app.get(
                 await db.query(
                     `SELECT
                         user_id
+
                      FROM users
+
                      WHERE user_id = ?
+
                      LIMIT 1`,
                     [userId]
                 );
@@ -338,10 +731,14 @@ app.get(
                     `SELECT
                         current_streak,
                         longest_streak
+
                      FROM streaks
+
                      WHERE user_id = ?
+
                      ORDER BY
                         streak_id DESC
+
                      LIMIT 1`,
                     [userId]
                 );
@@ -374,7 +771,9 @@ app.get(
                 await db.query(
                     `SELECT
                         COUNT(*) AS total
+
                      FROM workout_history
+
                      WHERE user_id = ?`,
                     [userId]
                 );
@@ -393,7 +792,9 @@ app.get(
                 await db.query(
                     `SELECT
                         COUNT(*) AS total
+
                      FROM workouts
+
                      WHERE user_id = ?
                        AND start_time >= NOW()
                        AND LOWER(status) =
@@ -409,6 +810,7 @@ app.get(
                 await db.query(
                     `SELECT
                         COUNT(*) AS total
+
                      FROM workout_participants wp
 
                      INNER JOIN workouts w
@@ -424,13 +826,11 @@ app.get(
 
             const upcomingWorkouts =
                 Number(
-                    createdUpcomingResult
-                        .total ||
+                    createdUpcomingResult.total ||
                     0
                 ) +
                 Number(
-                    joinedUpcomingResult
-                        .total ||
+                    joinedUpcomingResult.total ||
                     0
                 );
 
@@ -497,14 +897,20 @@ app.get(
             return res.render(
                 "Home",
                 {
+
                     title:
                         "GymBuddy",
 
                     dashboard: {
+
                         currentStreak,
+
                         longestStreak,
+
                         completedWorkouts,
+
                         upcomingWorkouts,
+
                         workoutPartners
                     }
                 }
@@ -527,7 +933,7 @@ app.get(
 );
 
 // =====================================================
-// ROUTES
+// APPLICATION ROUTES
 // =====================================================
 
 app.use(
@@ -585,7 +991,10 @@ app.use(
 // =====================================================
 
 app.use(
-    (req, res) => {
+    (
+        req,
+        res
+    ) => {
 
         return res
             .status(404)
@@ -621,6 +1030,7 @@ app.use(
             console.warn(
                 "REQUEST BODY TOO LARGE:",
                 {
+
                     method:
                         req.method,
 
@@ -639,17 +1049,13 @@ app.use(
         // =================================================
         // PRODUCTION LOGGING
         // =================================================
-        //
-        // Production logs avoid printing the entire raw
-        // error object, which can contain unnecessary
-        // internal details.
-        // =================================================
 
         if (isProduction) {
 
             console.error(
                 "GYMBUDDY APPLICATION ERROR:",
                 {
+
                     message:
                         error.message ||
                         "Unknown application error",
@@ -668,14 +1074,6 @@ app.use(
 
         } else {
 
-            // =================================================
-            // DEVELOPMENT LOGGING
-            // =================================================
-            //
-            // Full error information is useful while building
-            // and debugging GymBuddy locally.
-            // =================================================
-
             console.error(
                 "GYMBUDDY APPLICATION ERROR:",
                 error
@@ -689,6 +1087,7 @@ app.use(
         if (
             res.headersSent
         ) {
+
             return next(
                 error
             );
@@ -725,4 +1124,5 @@ app.use(
 // EXPORT
 // =====================================================
 
-module.exports = app;
+module.exports =
+    app;

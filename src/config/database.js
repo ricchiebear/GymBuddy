@@ -6,6 +6,7 @@ const mysql = require("mysql2/promise");
 
 const {
     DB_HOST,
+    DB_PORT,
     DB_USER,
     DB_PASSWORD,
     DB_NAME
@@ -22,9 +23,12 @@ const requiredDatabaseVariables = {
     DB_NAME
 };
 
-for (const [name, value] of Object.entries(
-    requiredDatabaseVariables
-)) {
+for (
+    const [name, value]
+    of Object.entries(
+        requiredDatabaseVariables
+    )
+) {
     if (!value) {
         throw new Error(
             `${name} is missing. Add it to your environment variables before starting GymBuddy.`
@@ -33,23 +37,61 @@ for (const [name, value] of Object.entries(
 }
 
 // =====================================================
+// DATABASE PORT
+// =====================================================
+
+const databasePort =
+    Number(
+        DB_PORT ||
+        3306
+    );
+
+if (
+    !Number.isInteger(
+        databasePort
+    ) ||
+    databasePort <= 0 ||
+    databasePort > 65535
+) {
+    throw new Error(
+        "DB_PORT must be a valid database port number."
+    );
+}
+
+// =====================================================
 // MYSQL CONNECTION POOL
 // =====================================================
 
 const db = mysql.createPool({
-    host: DB_HOST,
+    host:
+        DB_HOST,
 
-    user: DB_USER,
+    port:
+        databasePort,
 
-    password: DB_PASSWORD,
+    user:
+        DB_USER,
 
-    database: DB_NAME,
+    password:
+        DB_PASSWORD,
 
-    waitForConnections: true,
+    database:
+        DB_NAME,
 
-    connectionLimit: 10,
+    waitForConnections:
+        true,
 
-    queueLimit: 0
+    connectionLimit:
+        10,
+
+    queueLimit:
+        0,
+
+    enableKeepAlive:
+        true,
+
+    keepAliveInitialDelay:
+        0
 });
 
 // =====================================================
