@@ -1,5 +1,3 @@
-CREATE DATABASE IF NOT EXISTS gymbuddy;
-USE gymbuddy;
 
 CREATE TABLE users (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
