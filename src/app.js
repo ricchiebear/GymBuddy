@@ -679,7 +679,7 @@ app.get(
             if (!userId) {
 
                 return res.render(
-                    "Home",
+                    "home",
                     {
 
                         title:
@@ -895,7 +895,7 @@ app.get(
             // =================================================
 
             return res.render(
-                "Home",
+                "home",
                 {
 
                     title:
